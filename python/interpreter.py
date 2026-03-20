@@ -63,9 +63,15 @@ class Interpreter:
             index = self.eval(index_expr)
             value = self.eval(value_expr)
 
+            if not isinstance(index, int):
+                raise Exception(f"Buffer must be an integer, got {index}")
+
             if index < 0 or index >= len(self.env[name]):
                 raise Exception(f"Buffer index out of bounds: {index}")
             
+            if not isinstance(value, int):
+                raise Exception(f"Buffer must be an integer, got {value}")
+
             if value < 0 or value > 255:
                 raise Exception(f"Buffer value must be 0-255, got {value}")
             
@@ -84,8 +90,12 @@ class Interpreter:
                 raise Exception(f"Undefined buffer: {name}")
             
             index = self.eval(index_expr)
+            if not isinstance(index, int):
+                raise Exception(f"Buffer index must be integer, got {index}")
+
             if index < 0 or index >= len(self.env[name]):
                 raise Exception(f"Buffer index out of bounds: {index}")
+            
             return self.env[name][index]
 
         if node_type == 'NUMBER':
