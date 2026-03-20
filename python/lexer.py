@@ -5,12 +5,12 @@ TOKEN_SPEC = [
     ('IDENT',    r'[A-Za-z_][A-Za-z0-9_]*'),
     ('LBRACKET', r'\['),
     ('RBRACKET', r'\]'),
-    ('OP',       r'[+\-*/=]'),
+    ('OP',       r'==|!=|<=|>=|<|>|\+|\-|\*|/|='),
     ('NEWLINE',  r'\n'),
     ('SKIP',     r'[ \t]+'),
 ]
 
-KEYWORDS = {'print', 'buffer', 'send', 'recv'}
+KEYWORDS = {'print', 'buffer', 'send', 'recv', 'if'}
 
 def tokenize(code):
     tokens = []

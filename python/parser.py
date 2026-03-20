@@ -52,6 +52,26 @@ class Parser:
                 return self.index_assignment()
             return self.assignment()
 
+        if tok[0] == 'IF':
+            self.eat('IF')
+            condition = self.expression() # eval as bool
+            # body - One or more indented statements
+            body = []
+
+            if self.current()[0] != 'NEWLINE':
+                raise SyntaxError("Expected newline after if condition")
+            self.eat('NEWLINE')
+
+            if self.current()[0] != 'INDENT':
+                raise SyntaxError("Expected indented block after if")
+            self.eat('INDENT')
+
+            while self.current() and self.current()[0] != 'DEDENT':
+                body.append(self.statement())
+
+            self.eat('DEDENT')
+            return ('IF', condition, body)
+
         if tok[0] == 'SEND':
             self.eat('SEND')
             arg = self.factor()
@@ -92,7 +112,12 @@ class Parser:
     def expression(self):
         left = self.term()
 
-        while self.current() and self.current()[1] in ('+', '-'):
+        while self.current() and self.current()[0] == 'OP' and self.current()[1] in ('==','!=','<','>','<=','>='):
+            op = self.eat('OP')[1]
+            right = self.term()
+            left = ('BINOP', op, left, right)
+
+        while self.current() and self.current()[0] == 'OP' and self.current()[1] in ('+','-'):
             op = self.eat('OP')[1]
             right = self.term()
             left = ('BINOP', op, left, right)

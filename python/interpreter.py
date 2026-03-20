@@ -16,6 +16,13 @@ class Interpreter:
             value = self.eval(expr)
             self.env[name] = value
 
+        elif node_type == 'IF':
+            _, condition, body = node
+            cond_value = self.eval(condition)
+            if cond_value:
+                for stmt in body:
+                    self.execute(stmt)
+
         elif node_type == 'PRINT':
             _, expr = node
             value = self.eval(expr)
@@ -105,13 +112,17 @@ class Interpreter:
             l = self.eval(left)
             r = self.eval(right)
 
-            if op == '+':
-                return l + r
-            elif op == '-':
-                return l - r
-            elif op == '*':
-                return l * r
-            elif op == '/':
-                return l // r  # integer division
+            if op == '+': return l + r
+            if op == '-': return l - r
+            if op == '*': return l * r
+            if op == '/': return l // r  # integer division
+
+            # comparison operators
+            if op == '==': return int(l == r)
+            if op == '!=': return int(l != r)
+            if op == '<': return int(l < r)
+            if op == '>': return int(l > r)
+            if op == '<=': return int(l <= r)
+            if op == '>=': return int(l >= r)
 
         raise Exception(f"Unknown expression: {node}")

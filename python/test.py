@@ -2,10 +2,11 @@ from interpreter import Interpreter
 import lexer
 from parser import Parser
 
-code = """b = buffer 4
-send b
-r = recv 4
-print r[0]
+code = """r = recv 4
+if r[0] >= 128
+        send r
+        print r[0]
+
 """
 
 tokens = lexer.tokenize(code)
