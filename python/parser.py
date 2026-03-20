@@ -72,6 +72,25 @@ class Parser:
             self.eat('DEDENT')
             return ('IF', condition, body)
 
+        if tok[0] == 'LOOP':
+            self.eat('LOOP')
+            condition = self.expression()
+
+            if self.current()[0] != 'NEWLINE':
+                raise SyntaxError("Expected newline after loop condition")
+            self.eat('NEWLINE')
+
+            if self.current()[0] != 'INDENT':
+                raise SyntaxError("Expected indented block after loop")
+            self.eat('INDENT')
+
+            body = []
+            while self.current() and self.current()[0] != 'DEDENT':
+                body.append(self.statement())
+
+            self.eat('DEDENT')
+            return ('LOOP', condition, body)
+
         if tok[0] == 'SEND':
             self.eat('SEND')
             arg = self.factor()

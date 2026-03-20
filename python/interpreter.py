@@ -48,6 +48,12 @@ class Interpreter:
             buf = [random.randint(0, 255) for _ in range(size)]
             return buf
 
+        elif node_type == 'LOOP':
+            _, condition, body = node
+            while self.eval(condition):
+                for stmt in body:
+                    self.execute(stmt)
+
         elif node_type == 'INDEX_ASSIGN':
             _, name, index_expr, value_expr = node
 
