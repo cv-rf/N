@@ -52,6 +52,10 @@ class Parser:
                 return self.index_assignment()
             return self.assignment()
 
+        if tok[0] == 'STRING':
+            text = self.eat('STRING')[1]
+            return ('STRING', text[1:-1])
+
         if tok[0] == 'IF':
             self.eat('IF')
             condition = self.expression() # eval as bool

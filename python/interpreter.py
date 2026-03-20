@@ -1,8 +1,15 @@
 import random
+import socket
 
 class Interpreter:
     def __init__(self):
         self.env = {}
+        self.conn = None # TCP Connection
+
+    def connect(self, host, port):
+        self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.conn.connect((host, port))
+        print(f"Connected to {host}:{port}")
 
     def run(self, ast):
         for stmt in ast:
@@ -36,16 +43,29 @@ class Interpreter:
         elif node_type == 'SEND':
             _, buffer_node = node
             buf = self.eval(buffer_node)
+
             if not isinstance(buf, list):
                 raise Exception("SEND expects a buffer")
+            
+            data = bytes(buf) # convert list of ints to bytes
+            if self.conn is None:
+                raise Exception("No TCP connection established")
+            
+            self.conn.sendall(data)
             print(f"Sending: {buf}")
 
         elif node_type == 'RECV':
             _, size_node = node
             size = self.eval(size_node)
+
             if size <= 0:
                 raise Exception("RECV size must be positive")
-            buf = [random.randint(0, 255) for _ in range(size)]
+            
+            if self.conn is None:
+                raise Exception("No TCP connection established")
+
+            data = self.conn.recv(size)
+            buf = list(data)
             return buf
 
         elif node_type == 'LOOP':
@@ -99,6 +119,9 @@ class Interpreter:
             return self.env[name][index]
 
         if node_type == 'NUMBER':
+            return node[1]
+        
+        if node_type == 'STRING':
             return node[1]
 
         if node_type == 'VAR':

@@ -2,15 +2,14 @@ from interpreter import Interpreter
 import lexer
 from parser import Parser
 
-code = """b = buffer 4
+code = """connect "127.0.0.1" 9999
+b = buffer 4
 b[0] = 10
-b[4] = 20
-b[0] = 300
-
-i = 0
-loop i < 5
-        b[i] = i
-        i = i + 1
+b[1] = 20
+send b
+r = recv 4
+print r[0]
+print r[1]
 """
 
 tokens = lexer.tokenize(code)

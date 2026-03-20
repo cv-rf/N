@@ -2,6 +2,7 @@ import re
 
 TOKEN_SPEC = [
     ('NUMBER',   r'\d+'),
+    ('STRING', r'"[^"\n]*"'),
     ('IDENT',    r'[A-Za-z_][A-Za-z0-9_]*'),
     ('LBRACKET', r'\['),
     ('RBRACKET', r'\]'),
