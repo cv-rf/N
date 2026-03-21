@@ -7,7 +7,7 @@ class Parser:
         if self.pos < len(self.tokens):
             return self.tokens[self.pos]
         return None
-    
+
     def index_assignment(self):
         name = self.eat('IDENT')[1]
         self.eat('LBRACKET')
@@ -51,6 +51,15 @@ class Parser:
             if self.peek() and self.peek()[0] == 'LBRACKET':
                 return self.index_assignment()
             return self.assignment()
+
+        if tok[0] == 'CONNECT':
+            self.eat('CONNECT')
+            host_tok = self.eat('STRING')
+            host_node = ('STRING', host_tok[1][1:-1])
+            port_tok = self.eat('NUMBER')
+            port_node = ('NUMBER', int(port_tok[1]))
+            self.eat('NEWLINE')
+            return ('CONNECT', host_node, port_node)
 
         if tok[0] == 'STRING':
             text = self.eat('STRING')[1]
@@ -100,7 +109,7 @@ class Parser:
             arg = self.factor()
             self.eat('NEWLINE')
             return ('SEND', arg)
-        
+
         if tok[0] == 'RECV':
             self.eat('RECV')
             arg = self.expression()

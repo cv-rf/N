@@ -23,6 +23,19 @@ class Interpreter:
             value = self.eval(expr)
             self.env[name] = value
 
+        elif node_type == 'CONNECT':
+            _, host_node, port_node = node
+            host = self.eval(host_node)
+            port = self.eval(port_node)
+
+            import socket
+            self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                 self.conn.connect((host, port))
+                 print(f"Connected to {host}:{port}")
+            except ConnectionRefusedError:
+                 raise Exception(f"Cannot connect to {host}:{port}")
+
         elif node_type == 'IF':
             _, condition, body = node
             cond_value = self.eval(condition)
@@ -46,11 +59,11 @@ class Interpreter:
 
             if not isinstance(buf, list):
                 raise Exception("SEND expects a buffer")
-            
+
             data = bytes(buf) # convert list of ints to bytes
             if self.conn is None:
                 raise Exception("No TCP connection established")
-            
+
             self.conn.sendall(data)
             print(f"Sending: {buf}")
 
@@ -60,7 +73,7 @@ class Interpreter:
 
             if size <= 0:
                 raise Exception("RECV size must be positive")
-            
+
             if self.conn is None:
                 raise Exception("No TCP connection established")
 
@@ -88,13 +101,13 @@ class Interpreter:
 
             if index < 0 or index >= len(self.env[name]):
                 raise Exception(f"Buffer index out of bounds: {index}")
-            
+
             if not isinstance(value, int):
                 raise Exception(f"Buffer must be an integer, got {value}")
 
             if value < 0 or value > 255:
                 raise Exception(f"Buffer value must be 0-255, got {value}")
-            
+
             self.env[name][index] = value
 
         else:
@@ -108,19 +121,19 @@ class Interpreter:
 
             if name not in self.env:
                 raise Exception(f"Undefined buffer: {name}")
-            
+
             index = self.eval(index_expr)
             if not isinstance(index, int):
                 raise Exception(f"Buffer index must be integer, got {index}")
 
             if index < 0 or index >= len(self.env[name]):
                 raise Exception(f"Buffer index out of bounds: {index}")
-            
+
             return self.env[name][index]
 
         if node_type == 'NUMBER':
             return node[1]
-        
+
         if node_type == 'STRING':
             return node[1]
 

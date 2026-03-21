@@ -9,7 +9,6 @@ b[1] = 20
 send b
 r = recv 4
 print r[0]
-print r[1]
 """
 
 tokens = lexer.tokenize(code)

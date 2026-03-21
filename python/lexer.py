@@ -11,7 +11,7 @@ TOKEN_SPEC = [
     ('SKIP',     r'[ \t]+'),
 ]
 
-KEYWORDS = {'print', 'buffer', 'send', 'recv', 'if', 'loop'}
+KEYWORDS = {'print', 'buffer', 'send', 'recv', 'if', 'loop', 'connect'}
 
 def tokenize(code):
     tokens = []
