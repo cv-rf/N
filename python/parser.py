@@ -61,6 +61,15 @@ class Parser:
             self.eat('NEWLINE')
             return ('CONNECT', host_node, port_node)
 
+        if tok[0] == 'UDP_CONNECT':
+            self.eat('UDP_CONNECT')
+            host_tok = self.eat('STRING')
+            host_node = ('STRING', host_tok[1][1:-1])
+            port_tok = self.eat('NUMBER')
+            port_node = ('NUMBER', int(port_tok[1]))
+            self.eat('NEWLINE')
+            return ('UDP_CONNECT', host_node, port_node)
+
         if tok[0] == 'STRING':
             text = self.eat('STRING')[1]
             return ('STRING', text[1:-1])
