@@ -52,6 +52,39 @@ class Parser:
                 return self.index_assignment()
             return self.assignment()
 
+        if tok[0] == 'FUNC':
+            self.eat('FUNC')
+            name = self.eat('IDENT')[1]
+            self.eat('LPAREN')
+            params = []
+            while self.current()[0] != 'RPAREN':
+                param = self.eat('IDENT')[1]
+                params.append(param)
+                if self.current()[0] == 'COMMA':
+                    self.eat('COMMA')
+            self.eat('RPAREN')
+
+            if self.current()[0] != 'NEWLINE':
+                raise SyntaxError("Expected newline after function declaration")
+            self.eat('NEWLINE')
+
+            if self.current()[0] != 'INDENT':
+                raise SyntaxError("Expected indented block for function body")
+            self.eat('INDENT')
+
+            body = []
+            while self.current() and self.current()[0] != 'DEDENT':
+                body.append(self.statement())
+            self.eat('DEDENT')
+
+            return ('FUNC_DEF', name, params, body)
+        
+        if tok[0] == 'RETURN':
+            self.eat('RETURN')
+            expr = self.expression()
+            self.eat('NEWLINE')
+            return ('RETURN', expr)
+
         if tok[0] == 'CONNECT':
             self.eat('CONNECT')
             host_tok = self.eat('STRING')
@@ -193,6 +226,16 @@ class Parser:
                 index = self.expression()
                 self.eat('RBRACKET')
                 return ('INDEX', name, index)
+            
+            if self.current() and self.current()[0] == 'LPAREN':
+                self.eat('LPAREN')
+                args = []
+                while self.current() and self.current()[0] != 'RPAREN':
+                    args.append(self.expression())
+                    if self.current() and self.current()[0] == 'COMMA':
+                        self.eat('COMMA')
+                self.eat('RPAREN')
+                return ('FUNC_CALL', name, args)
 
             return ('VAR', name)
 

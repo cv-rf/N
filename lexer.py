@@ -2,16 +2,19 @@ import re
 
 TOKEN_SPEC = [
     ('NUMBER',   r'\d+'),
-    ('STRING', r'"[^"\n]*"'),
+    ('STRING',   r'"[^"\n]*"'),
     ('IDENT',    r'[A-Za-z_][A-Za-z0-9_]*'),
     ('LBRACKET', r'\['),
     ('RBRACKET', r'\]'),
+    ('LPAREN',   r'\('),
+    ('RPAREN',   r'\)'),
+    ('COMMA',   r'\,'),
     ('OP',       r'==|!=|<=|>=|<|>|\+|\-|\*|/|='),
     ('NEWLINE',  r'\n'),
     ('SKIP',     r'[ \t]+'),
 ]
 
-KEYWORDS = {'print', 'buffer', 'send', 'recv', 'if', 'loop', 'connect', 'udp_connect'}
+KEYWORDS = {'print', 'buffer', 'send', 'recv', 'if', 'loop', 'connect', 'udp_connect', 'func', 'return'}
 
 def tokenize(code):
     tokens = []

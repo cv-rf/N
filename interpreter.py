@@ -1,5 +1,8 @@
-import random
 import socket
+
+class ReturnException(Exception):
+    def __init__(self, value):
+        self.value = value
 
 class Interpreter:
     def __init__(self):
@@ -39,6 +42,34 @@ class Interpreter:
             self.active_socket = self.udp_sock
             self.udp_addr = (host, port)
             print(f"UDP socket ready for {host}:{port}")
+
+        # ---------------- FUNC ----------------
+        elif node_type == 'FUNC_DEF':
+            _, name, params, body = node
+            self.env[name] = ('FUNC', params, body)
+
+        elif node_type == 'RETURN':
+            _, expr = node
+            value = self.eval(expr)
+            raise ReturnException(value)
+
+        elif node_type == 'FUNC_CALL':
+            _, name, args = node
+            if name not in self.env or self.env[name][0] != 'FUNC':
+                raise Exception(f"Undefined function: {name}")
+            
+            _, params, body = self.env[name]
+            if len(args) != len(params):
+                raise Exception(f"Expected {len(params)} args, got {len(args)}")
+            
+            local_env = self.env.copy()
+            for p, a in zip(params, args):
+                local_env[p] = self.eval(a)
+
+            try:
+                self.run_function_body(body, local_env)
+            except ReturnException as ret:
+                return ret.value
 
         # ---------------- SEND ----------------
         elif node_type == 'SEND':
@@ -197,4 +228,32 @@ class Interpreter:
             if op == '<=': return int(l <= r)
             if op == '>=': return int(l >= r)
 
+        # ------------------- function call -------------------
+        if node_type == 'FUNC_CALL':
+            _, func_name, arg_nodes = node
+            if func_name not in self.env or self.env[func_name][0] != 'FUNC':
+                raise Exception(f"Undefined function: {func_name}")
+            
+            _, params, body = self.env[func_name]
+            if len(arg_nodes) != len(params):
+                raise Exception(f"{func_name} expected {len(params)} args, got {len(arg_nodes)}")
+            
+            local_env = self.env.copy()
+            for param, arg_node in zip(params, arg_nodes):
+                local_env[param] = self.eval(arg_node)
+
+            try:
+                self.run_function_body(body, local_env)
+            except ReturnException as ret:
+                return ret.value
+
         raise Exception(f"Unknown expression: {node}")
+    
+    def run_function_body(self, body, local_env):
+        old_env = self.env
+        self.env = local_env
+        try:
+            for stmt in body:
+                self.execute(stmt)
+        finally:
+            self.env = old_env
