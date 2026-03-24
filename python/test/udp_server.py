@@ -1,16 +1,13 @@
 import socket
 
-HOST = "127.0.0.1"
+HOST = '127.0.0.1'
 PORT = 9999
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind((HOST, PORT))
+with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+    s.bind((HOST, PORT))
+    print(f"UDP echo server listening on {HOST}:{PORT}")
 
-print(f"UDP server listening on {HOST}:{PORT}")
-
-while True:
-    data, addr = sock.recvfrom(1024)  # buffer size
-    print(f"Received from {addr}: {list(data)}")
-
-    reply = bytes([x for x in data])
-    sock.sendto(reply, addr)
+    while True:
+        data, addr = s.recvfrom(1024)
+        print(f"UDP received from {addr}: {list(data)}")
+        s.sendto(data, addr)

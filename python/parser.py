@@ -181,6 +181,10 @@ class Parser:
         if tok[0] == 'NUMBER':
             return ('NUMBER', int(self.eat('NUMBER')[1]))
 
+        if tok[0] == 'STRING':
+            text = self.eat('STRING')[1]
+            return ('STRING', text[1:-1])
+
         if tok[0] == 'IDENT':
             name = self.eat('IDENT')[1]
 
