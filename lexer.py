@@ -14,7 +14,12 @@ TOKEN_SPEC = [
     ('SKIP',     r'[ \t]+'),
 ]
 
-KEYWORDS = {'print', 'buffer', 'send', 'recv', 'if', 'loop', 'connect', 'udp_connect', 'func', 'return'}
+KEYWORDS = {
+    'print', 'buffer', 'send', 'recv',
+    'if', 'else', 'loop',
+    'connect', 'udp_connect',
+    'func', 'return'
+}
 
 def tokenize(code):
     tokens = []

@@ -111,7 +111,7 @@ class Parser:
             self.eat('IF')
             condition = self.expression() # eval as bool
             # body - One or more indented statements
-            body = []
+            if_body = []
 
             if self.current()[0] != 'NEWLINE':
                 raise SyntaxError("Expected newline after if condition")
@@ -122,10 +122,33 @@ class Parser:
             self.eat('INDENT')
 
             while self.current() and self.current()[0] != 'DEDENT':
-                body.append(self.statement())
+                if_body.append(self.statement())
 
             self.eat('DEDENT')
-            return ('IF', condition, body)
+
+            else_body = []
+
+            if self.current() and self.current()[0] == 'ELSE':
+                self.eat('ELSE')
+
+                if self.current() and self.current()[0] == 'IF':
+                    else_if_node = self.statement()
+                    else_body = [else_if_node]
+
+                else:
+                    if self.current()[0] != 'NEWLINE':
+                        raise SyntaxError("Expected newline after else")
+                    self.eat('NEWLINE')
+
+                    if self.current()[0] != 'INDENT':
+                        raise SyntaxError("Expected indented block after else")
+                    self.eat('INDENT')
+
+                    while self.current() and self.current()[0] != 'DEDENT':
+                        else_body.append(self.statement())
+                    self.eat('DEDENT')
+
+            return ('IF', condition, if_body, else_body)
 
         if tok[0] == 'LOOP':
             self.eat('LOOP')

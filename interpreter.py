@@ -130,9 +130,13 @@ class Interpreter:
             print(value)
 
         elif node_type == 'IF':
-            _, condition, body = node
+            _, condition, if_body, else_body = node
+
             if self.eval(condition):
-                for stmt in body:
+                for stmt in if_body:
+                    self.execute(stmt)
+            else:
+                for stmt in else_body:
                     self.execute(stmt)
 
         elif node_type == 'LOOP':

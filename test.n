@@ -1,12 +1,8 @@
-func add(a, b)
-        return a + b
+x = 7
 
-x = add(3, 4)
-print x
-
-func factorial(n)
-        if n == 0
-                return 1
-        return n * factorial(n - 1)
-
-print factorial(5)
+if x < 5
+        print "less then 5"
+else if x < 10
+        print "between 5 and 9"
+else
+        print "10 or greater"
