@@ -61,21 +61,22 @@ class Interpreter:
 
         elif node_type == 'FUNC_CALL':
             _, name, args = node
-            if name not in self.env or self.env[name][0] != 'FUNC':
-                raise Exception(f"Undefined function: {name}")
 
-            _, params, body = self.env[name]
-            if len(args) != len(params):
-                raise Exception(f"Expected {len(params)} args, got {len(args)}")
+            if name in self.env and self.env[name][0] == 'FUNC':
+                _, params, body = self.env[name]
+                if len(args) != len(params):
+                    raise Exception(f"Expected {len(params)} args, got {len(args)}")
 
-            local_env = self.env.copy()
-            for p, a in zip(params, args):
-                local_env[p] = self.eval(a)
+                local_env = self.env.copy()
+                for p, a in zip(params, args):
+                    local_env[p] = self.eval(a)
 
-            try:
-                self.run_function_body(body, local_env)
-            except ReturnException as ret:
-                return ret.value
+                try:
+                    self.run_function_body(body, local_env)
+                except ReturnException as ret:
+                    return ret.value
+            else:
+                return self.eval(node)
 
         elif node_type == 'BREAK':
             raise BreakException()
@@ -87,10 +88,11 @@ class Interpreter:
         elif node_type == 'SEND':
             _, buffer_node = node
             buf = self.eval(buffer_node)
-            if not isinstance(buf, list):
+
+            if not (isinstance(buf, tuple) and buf[0] == 'BUFFER'):
                 raise Exception("SEND expects a buffer")
 
-            data = bytes(buf)
+            data = bytes(buf[1])
 
             if self.active_socket is None:
                 raise Exception("No socket available for SEND")
@@ -99,7 +101,6 @@ class Interpreter:
             if self.active_socket == self.udp_sock:
                 self.udp_sock.sendto(data, self.udp_addr)
                 print(f"Sent UDP: {list(data)}")
-            # TCP send
             else:
                 self.conn.sendall(data)
                 print(f"Sent TCP: {list(data)}")
@@ -134,7 +135,7 @@ class Interpreter:
         elif node_type == 'BUFFER_ALLOC':
             _, name, size_expr = node
             size = self.eval(size_expr)
-            self.env[name] = [0] * size
+            self.env[name] = ('BUFFER', [0] * size)
 
         elif node_type == 'PRINT':
             _, expr = node
@@ -167,12 +168,17 @@ class Interpreter:
             if name not in self.env:
                 raise Exception(f"Undefined buffer: {name}")
 
+            if self.env[name][0] != 'BUFFER':
+                raise Exception("Indexing only allowed on buffers")
+
+            buffer = self.env[name][1]
+
             index = self.eval(index_expr)
             value = self.eval(value_expr)
 
             if not isinstance(index, int):
                 raise Exception(f"Buffer index must be integer, got {index}")
-            if index < 0 or index >= len(self.env[name]):
+            if index < 0 or index >= len(buffer):
                 raise Exception(f"Buffer index out of bounds: {index}")
 
             if not isinstance(value, int):
@@ -180,7 +186,7 @@ class Interpreter:
             if value < 0 or value > 255:
                 raise Exception(f"Buffer value must be 0-255, got {value}")
 
-            self.env[name][index] = value
+            buffer[index] = value
 
         else:
             raise Exception(f"Unknown statement: {node}")
@@ -221,16 +227,33 @@ class Interpreter:
                 raise Exception(f"Undefined variable: {name}")
             return self.env[name]
 
+        if node_type == 'LIST':
+            _, elements = node
+            return [self.eval(e) for e in elements]
+
         if node_type == 'INDEX':
             _, name, index_expr = node
             if name not in self.env:
                 raise Exception(f"Undefined buffer: {name}")
+
+            value = self.env[name]
+
             index = self.eval(index_expr)
             if not isinstance(index, int):
                 raise Exception(f"Buffer index must be integer, got {index}")
-            if index < 0 or index >= len(self.env[name]):
-                raise Exception(f"Buffer index out of bounds: {index}")
-            return self.env[name][index]
+
+            if isinstance(value, tuple) and value[0] == 'BUFFER':
+                buf = value[1]
+                if index < 0 or index >= len(buf):
+                    raise Exception(f"Buffer index out of bounds: {index}")
+                return buf[index]
+
+            if isinstance(value, list):
+                if index < 0 or index >= len(value):
+                    raise Exception(f"List index out of bounds: {index}")
+                return value[index]
+
+            raise Exception("Indexing is only supported on buffers or lists")
 
         if node_type == 'BINOP':
             _, op, left, right = node
@@ -253,19 +276,57 @@ class Interpreter:
         if node_type == 'FUNC_CALL':
             _, func_name, arg_nodes = node
 
+            # ---- Built-in append ----
+            if func_name == 'append':
+                if len(arg_nodes) != 2:
+                    raise Exception("append(list_or_buffer, value) requires 2 arguments")
+
+                container = self.eval(arg_nodes[0])
+                val = self.eval(arg_nodes[1])
+
+                if isinstance(container, list):
+                    container.append(val)
+                elif isinstance(container, tuple) and container[0] == 'BUFFER':
+                    container[1].append(val)
+                else:
+                    raise Exception("append() first argument must be a list or buffer")
+                return None
+
+            # ---- Built-in pop ----
+            if func_name == 'pop':
+                if len(arg_nodes) != 1:
+                    raise Exception("pop(list_or_buffer) requires 1 argument")
+
+                container = self.eval(arg_nodes[0])
+
+                if isinstance(container, list):
+                    if not container:
+                        raise Exception("pop() from empty list")
+                    return container.pop()
+                elif isinstance(container, tuple) and container[0] == 'BUFFER':
+                    buf = container[1]
+                    if not buf:
+                        raise Exception("pop() from empty buffer")
+                    return buf.pop()
+                else:
+                    raise Exception("pop() argument must be a list or buffer")
+
+            # ---- Built-in len ----
             if func_name == 'len':
                 if len(arg_nodes) != 1:
                     raise Exception("len() takes exactly 1 argument")
-
                 value = self.eval(arg_nodes[0])
 
-                if isinstance(value, list):   # buffer
+                if isinstance(value, list):
                     return len(value)
-                if isinstance(value, str):    # string
+                elif isinstance(value, str):
                     return len(value)
+                elif isinstance(value, tuple) and value[0] == 'BUFFER':
+                    return len(value[1])
+                else:
+                    raise Exception("len() unsupported type")
 
-                raise Exception("len() unsopported type")
-
+            # ---- User-defined functions ----
             if func_name not in self.env or self.env[func_name][0] != 'FUNC':
                 raise Exception(f"Undefined function: {func_name}")
 

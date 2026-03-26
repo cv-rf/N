@@ -1,2 +1,20 @@
-buf = buffer 4
+x = [1, 2, 3]
+append(x, 4)
+print x
+
+y = pop(x)
+print y
+print x
+
+print len(x)
+
+buf = buffer 3
+buf[0] = 10
+buf[1] = 20
+buf[2] = 30
+
 print len(buf)
+
+connect "127.0.0.1" 9998
+send buf
+send x

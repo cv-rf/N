@@ -50,6 +50,8 @@ class Parser:
         if tok[0] == 'IDENT':
             if self.peek() and self.peek()[0] == 'LBRACKET':
                 return self.index_assignment()
+            if self.peek() and self.peek()[0] == 'LPAREN':
+                return self.factor()
             return self.assignment()
 
         if tok[0] == 'FUNC':
@@ -250,6 +252,20 @@ class Parser:
         if tok[0] == 'STRING':
             text = self.eat('STRING')[1]
             return ('STRING', text[1:-1])
+
+        if tok[0] == 'LBRACKET':
+            self.eat('LBRACKET')
+            elements = []
+
+            if self.current() and self.current()[0] != 'RBRACKET':
+                elements.append(self.expression())
+
+                while self.current() and self.current()[0] == 'COMMA':
+                    self.eat('COMMA')
+                    elements.append(self.expression())
+
+            self.eat('RBRACKET')
+            return ('LIST', elements)
 
         if tok[0] == 'IDENT':
             name = self.eat('IDENT')[1]
