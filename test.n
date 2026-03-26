@@ -1,3 +1,7 @@
-x = 5 # HELLO N!
+x = true
+y = false
 
-print x
+if y
+        print "yes"
+else
+        print "no"

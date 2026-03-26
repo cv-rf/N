@@ -23,7 +23,8 @@ KEYWORDS = {
     'if', 'else', 'loop',
     'connect', 'udp_connect',
     'func', 'return',
-    'break', 'continue'
+    'break', 'continue',
+    'true', 'false'
 }
 
 def tokenize(code):

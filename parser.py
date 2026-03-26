@@ -253,6 +253,14 @@ class Parser:
             text = self.eat('STRING')[1]
             return ('STRING', text[1:-1])
 
+        if tok[0] == 'TRUE':
+            self.eat('TRUE')
+            return ('NUMBER', 1)
+
+        if tok[0] == 'FALSE':
+            self.eat('FALSE')
+            return ('NUMBER', 0)
+
         if tok[0] == 'LBRACKET':
             self.eat('LBRACKET')
             elements = []

@@ -237,6 +237,12 @@ class Interpreter:
                 raise Exception(f"Undefined variable: {name}")
             return self.env[name]
 
+        if node_type == 'TRUE':
+            return 1
+
+        if node_type == 'FALSE':
+            return 0
+
         if node_type == 'LIST':
             _, elements = node
             return [self.eval(e) for e in elements]
