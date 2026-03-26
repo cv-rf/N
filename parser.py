@@ -33,10 +33,17 @@ class Parser:
     def parse(self):
         statements = []
         while self.current():
-            if self.current()[0] == 'NEWLINE':
+            while self.current() and self.current()[0] == 'NEWLINE':
                 self.eat('NEWLINE')
-                continue
-            statements.append(self.statement())
+
+            if self.current() is None:
+                break
+
+            stmt = self.statement()
+            statements.append(stmt)
+
+            if self.current() and self.current()[0] == 'NEWLINE':
+                self.eat('NEWLINE')
         return statements
 
     def peek(self):
@@ -48,154 +55,67 @@ class Parser:
         tok = self.current()
 
         if tok[0] == 'IDENT':
+            # Index assignment
             if self.peek() and self.peek()[0] == 'LBRACKET' and self.peek(2) and self.peek(2)[0] == 'OP' and self.peek(2)[1] == '=':
-                return self.index_assignment()
+                node = self.index_assignment()
+            # Function call
             elif self.peek() and self.peek()[0] == 'LPAREN':
-                return self.factor()
+                node = self.factor()  # returns FUNC_CALL
+            # Simple assignment
             elif self.peek() and self.peek()[0] == 'OP' and self.peek()[1] == '=':
-                return self.assignment()
+                node = self.assignment()
+            else:
+                raise SyntaxError(f"Unexpected IDENT usage: {tok}")
+            if self.current() and self.current()[0] == 'NEWLINE':
+                self.eat('NEWLINE')
+            return node
 
-        if tok[0] == 'FUNC':
-            self.eat('FUNC')
-            name = self.eat('IDENT')[1]
-            self.eat('LPAREN')
-            params = []
-            while self.current()[0] != 'RPAREN':
-                param = self.eat('IDENT')[1]
-                params.append(param)
-                if self.current()[0] == 'COMMA':
-                    self.eat('COMMA')
-            self.eat('RPAREN')
+        elif tok[0] in ('FUNC', 'BREAK', 'CONTINUE', 'RETURN', 'IF', 'LOOP', 'PRINT', 'SEND', 'RECV', 'CONNECT', 'UDP_CONNECT'):
+            if tok[0] == 'FUNC':
+                node = self.func_def()
+            elif tok[0] == 'BREAK':
+                self.eat('BREAK')
+                node = ('BREAK',)
+            elif tok[0] == 'CONTINUE':
+                self.eat('CONTINUE')
+                node = ('CONTINUE',)
+            elif tok[0] == 'RETURN':
+                self.eat('RETURN')
+                expr = self.expression()
+                node = ('RETURN', expr)
+            elif tok[0] in ('CONNECT', 'UDP_CONNECT'):
+                kw = self.eat(tok[0])[0]
+                host_tok = self.eat('STRING')
+                host_node = ('STRING', host_tok[1][1:-1])
+                port_tok = self.eat('NUMBER')
+                port_node = ('NUMBER', int(port_tok[1]))
+                node = (kw, host_node, port_node)
+            elif tok[0] == 'PRINT':
+                node = self.print_stmt()
+            elif tok[0] == 'SEND':
+                self.eat('SEND')
+                arg = self.factor()
+                node = ('SEND', arg)
+            elif tok[0] == 'RECV':
+                self.eat('RECV')
+                arg = self.expression()
+                node = ('RECV', arg)
+            elif tok[0] == 'IF':
+                node = self.if_stmt()
+            elif tok[0] == 'LOOP':
+                node = self.loop_stmt()
+            else:
+                raise SyntaxError(f"Unhandled keyword: {tok}")
 
-            if self.current()[0] != 'NEWLINE':
-                raise SyntaxError("Expected newline after function declaration")
-            self.eat('NEWLINE')
+            if self.current() and self.current()[0] == 'NEWLINE':
+                self.eat('NEWLINE')
+            return node
 
-            if self.current()[0] != 'INDENT':
-                raise SyntaxError("Expected indented block for function body")
-            self.eat('INDENT')
-
-            body = []
-            while self.current() and self.current()[0] != 'DEDENT':
-                body.append(self.statement())
-            self.eat('DEDENT')
-
-            return ('FUNC_DEF', name, params, body)
-
-        if tok[0] == 'BREAK':
-            self.eat('BREAK')
-            self.eat('NEWLINE')
-            return ('BREAK',)
-
-        if tok[0] == 'CONTINUE':
-            self.eat('CONTINUE')
-            self.eat('NEWLINE')
-            return ('CONTINUE',)
-
-        if tok[0] == 'RETURN':
-            self.eat('RETURN')
-            expr = self.expression()
-            self.eat('NEWLINE')
-            return ('RETURN', expr)
-
-        if tok[0] == 'CONNECT':
-            self.eat('CONNECT')
-            host_tok = self.eat('STRING')
-            host_node = ('STRING', host_tok[1][1:-1])
-            port_tok = self.eat('NUMBER')
-            port_node = ('NUMBER', int(port_tok[1]))
-            self.eat('NEWLINE')
-            return ('CONNECT', host_node, port_node)
-
-        if tok[0] == 'UDP_CONNECT':
-            self.eat('UDP_CONNECT')
-            host_tok = self.eat('STRING')
-            host_node = ('STRING', host_tok[1][1:-1])
-            port_tok = self.eat('NUMBER')
-            port_node = ('NUMBER', int(port_tok[1]))
-            self.eat('NEWLINE')
-            return ('UDP_CONNECT', host_node, port_node)
-
-        if tok[0] == 'STRING':
+        elif tok[0] == 'STRING':
             text = self.eat('STRING')[1]
+            if self.current() and self.current()[0] == 'NEWLINE':
+                self.eat('NEWLINE')
             return ('STRING', text[1:-1])
-
-        if tok[0] == 'IF':
-            self.eat('IF')
-            condition = self.expression() # eval as bool
-            # body - One or more indented statements
-            if_body = []
-
-            if self.current()[0] != 'NEWLINE':
-                raise SyntaxError("Expected newline after if condition")
-            self.eat('NEWLINE')
-
-            if self.current()[0] != 'INDENT':
-                raise SyntaxError("Expected indented block after if")
-            self.eat('INDENT')
-
-            while self.current() and self.current()[0] != 'DEDENT':
-                if_body.append(self.statement())
-
-            self.eat('DEDENT')
-
-            else_body = []
-
-            if self.current() and self.current()[0] == 'ELSE':
-                self.eat('ELSE')
-
-                if self.current() and self.current()[0] == 'IF':
-                    else_if_node = self.statement()
-                    else_body = [else_if_node]
-
-                else:
-                    if self.current()[0] != 'NEWLINE':
-                        raise SyntaxError("Expected newline after else")
-                    self.eat('NEWLINE')
-
-                    if self.current()[0] != 'INDENT':
-                        raise SyntaxError("Expected indented block after else")
-                    self.eat('INDENT')
-
-                    while self.current() and self.current()[0] != 'DEDENT':
-                        else_body.append(self.statement())
-                    self.eat('DEDENT')
-
-            return ('IF', condition, if_body, else_body)
-
-        if tok[0] == 'LOOP':
-            self.eat('LOOP')
-            condition = self.expression()
-
-            if self.current()[0] != 'NEWLINE':
-                raise SyntaxError("Expected newline after loop condition")
-            self.eat('NEWLINE')
-
-            if self.current()[0] != 'INDENT':
-                raise SyntaxError("Expected indented block after loop")
-            self.eat('INDENT')
-
-            body = []
-            while self.current() and self.current()[0] != 'DEDENT':
-                body.append(self.statement())
-
-            self.eat('DEDENT')
-            return ('LOOP', condition, body)
-
-        if tok[0] == 'SEND':
-            self.eat('SEND')
-            arg = self.factor()
-            self.eat('NEWLINE')
-            return ('SEND', arg)
-
-        if tok[0] == 'RECV':
-            self.eat('RECV')
-            arg = self.expression()
-            self.eat('NEWLINE')
-            return ('RECV', arg)
-
-        if tok[0] == 'PRINT':
-            return self.print_stmt()
 
         raise SyntaxError(f"Unknown statement: {tok}")
 
