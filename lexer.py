@@ -18,7 +18,8 @@ KEYWORDS = {
     'print', 'buffer', 'send', 'recv',
     'if', 'else', 'loop',
     'connect', 'udp_connect',
-    'func', 'return'
+    'func', 'return',
+    'break', 'continue'
 }
 
 def tokenize(code):

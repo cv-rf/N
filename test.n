@@ -1,8 +1,6 @@
-x = 7
-
-if x < 5
-        print "less then 5"
-else if x < 10
-        print "between 5 and 9"
-else
-        print "10 or greater"
+i = 0
+loop i < 5
+        i = i + 1
+        if i == 3
+                continue
+        print i

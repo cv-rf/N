@@ -78,7 +78,17 @@ class Parser:
             self.eat('DEDENT')
 
             return ('FUNC_DEF', name, params, body)
-        
+
+        if tok[0] == 'BREAK':
+            self.eat('BREAK')
+            self.eat('NEWLINE')
+            return ('BREAK',)
+
+        if tok[0] == 'CONTINUE':
+            self.eat('CONTINUE')
+            self.eat('NEWLINE')
+            return ('CONTINUE',)
+
         if tok[0] == 'RETURN':
             self.eat('RETURN')
             expr = self.expression()
@@ -249,7 +259,7 @@ class Parser:
                 index = self.expression()
                 self.eat('RBRACKET')
                 return ('INDEX', name, index)
-            
+
             if self.current() and self.current()[0] == 'LPAREN':
                 self.eat('LPAREN')
                 args = []

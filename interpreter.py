@@ -4,6 +4,12 @@ class ReturnException(Exception):
     def __init__(self, value):
         self.value = value
 
+class BreakException(Exception):
+    pass
+
+class ContinueException(Exception):
+    pass
+
 class Interpreter:
     def __init__(self):
         self.env = {}
@@ -57,11 +63,11 @@ class Interpreter:
             _, name, args = node
             if name not in self.env or self.env[name][0] != 'FUNC':
                 raise Exception(f"Undefined function: {name}")
-            
+
             _, params, body = self.env[name]
             if len(args) != len(params):
                 raise Exception(f"Expected {len(params)} args, got {len(args)}")
-            
+
             local_env = self.env.copy()
             for p, a in zip(params, args):
                 local_env[p] = self.eval(a)
@@ -70,6 +76,12 @@ class Interpreter:
                 self.run_function_body(body, local_env)
             except ReturnException as ret:
                 return ret.value
+
+        elif node_type == 'BREAK':
+            raise BreakException()
+
+        elif node_type == 'CONTINUE':
+            raise ContinueException()
 
         # ---------------- SEND ----------------
         elif node_type == 'SEND':
@@ -142,8 +154,13 @@ class Interpreter:
         elif node_type == 'LOOP':
             _, condition, body = node
             while self.eval(condition):
-                for stmt in body:
-                    self.execute(stmt)
+                try:
+                    for stmt in body:
+                        self.execute(stmt)
+                except ContinueException:
+                    continue
+                except BreakException:
+                    break
 
         elif node_type == 'INDEX_ASSIGN':
             _, name, index_expr, value_expr = node
@@ -181,10 +198,10 @@ class Interpreter:
             size = self.eval(size_node)
             if size <= 0:
                 raise Exception("RECV size must be positive")
-            
+
             if self.active_socket is None:
                 raise Exception("No socket available for RECV")
-            
+
             if self.active_socket == self.udp_sock:
                 data, addr = self.udp_sock.recvfrom(size)
                 return list(data)
@@ -237,11 +254,11 @@ class Interpreter:
             _, func_name, arg_nodes = node
             if func_name not in self.env or self.env[func_name][0] != 'FUNC':
                 raise Exception(f"Undefined function: {func_name}")
-            
+
             _, params, body = self.env[func_name]
             if len(arg_nodes) != len(params):
                 raise Exception(f"{func_name} expected {len(params)} args, got {len(arg_nodes)}")
-            
+
             local_env = self.env.copy()
             for param, arg_node in zip(params, arg_nodes):
                 local_env[param] = self.eval(arg_node)
@@ -252,7 +269,7 @@ class Interpreter:
                 return ret.value
 
         raise Exception(f"Unknown expression: {node}")
-    
+
     def run_function_body(self, body, local_env):
         old_env = self.env
         self.env = local_env
