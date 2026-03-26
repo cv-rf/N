@@ -252,6 +252,20 @@ class Interpreter:
         # ------------------- function call -------------------
         if node_type == 'FUNC_CALL':
             _, func_name, arg_nodes = node
+
+            if func_name == 'len':
+                if len(arg_nodes) != 1:
+                    raise Exception("len() takes exactly 1 argument")
+
+                value = self.eval(arg_nodes[0])
+
+                if isinstance(value, list):   # buffer
+                    return len(value)
+                if isinstance(value, str):    # string
+                    return len(value)
+
+                raise Exception("len() unsopported type")
+
             if func_name not in self.env or self.env[func_name][0] != 'FUNC':
                 raise Exception(f"Undefined function: {func_name}")
 
