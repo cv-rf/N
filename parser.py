@@ -267,6 +267,26 @@ class Parser:
             self.eat('RBRACKET')
             return ('LIST', elements)
 
+        if tok[0] == 'LBRACE':
+            self.eat('LBRACE')
+            pairs = []
+
+            if self.current() and self.current()[0] != 'RBRACE':
+                key = self.expression()
+                self.eat('COLON')
+                value = self.expression()
+                pairs.append((key, value))
+
+                while self.current() and self.current()[0] == 'COMMA':
+                    self.eat('COMMA')
+                    key = self.expression()
+                    self.eat('COLON')
+                    value = self.expression()
+                    pairs.append((key, value))
+
+            self.eat('RBRACE')
+            return ('MAP', pairs)
+
         if tok[0] == 'IDENT':
             name = self.eat('IDENT')[1]
 

@@ -168,6 +168,16 @@ class Interpreter:
             if name not in self.env:
                 raise Exception(f"Undefined buffer: {name}")
 
+            if isinstance(self.env[name], dict):
+                key = self.eval(index_expr)
+                value = self.eval(value_expr)
+
+                if not isinstance(key, str):
+                    raise Exception("Map key must be string")
+
+                self.env[name][key] = value
+                return
+
             if self.env[name][0] != 'BUFFER':
                 raise Exception("Indexing only allowed on buffers")
 
@@ -231,12 +241,38 @@ class Interpreter:
             _, elements = node
             return [self.eval(e) for e in elements]
 
+        if node_type == 'MAP':
+            _, pairs = node
+            result = {}
+
+            for key_node, value_node in pairs:
+                key = self.eval(key_node)
+                value = self.eval(value_node)
+
+                if not isinstance(key, str):
+                    raise Exception("Map keys must be strings")
+
+                result[key] = value
+
+            return result
+
         if node_type == 'INDEX':
             _, name, index_expr = node
             if name not in self.env:
                 raise Exception(f"Undefined buffer: {name}")
 
             value = self.env[name]
+
+            if isinstance(value, dict):
+                key = self.eval(index_expr)
+
+                if not isinstance(key, str):
+                    raise Exception(f"Map key must be string, got {key}")
+
+                if key not in value:
+                    raise Exception(f"Key not found: {key}")
+
+                return value[key]
 
             index = self.eval(index_expr)
             if not isinstance(index, int):
