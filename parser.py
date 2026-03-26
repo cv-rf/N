@@ -48,11 +48,12 @@ class Parser:
         tok = self.current()
 
         if tok[0] == 'IDENT':
-            if self.peek() and self.peek()[0] == 'LBRACKET':
+            if self.peek() and self.peek()[0] == 'LBRACKET' and self.peek(2) and self.peek(2)[0] == 'OP' and self.peek(2)[1] == '=':
                 return self.index_assignment()
-            if self.peek() and self.peek()[0] == 'LPAREN':
+            elif self.peek() and self.peek()[0] == 'LPAREN':
                 return self.factor()
-            return self.assignment()
+            elif self.peek() and self.peek()[0] == 'OP' and self.peek()[1] == '=':
+                return self.assignment()
 
         if tok[0] == 'FUNC':
             self.eat('FUNC')
@@ -219,104 +220,113 @@ class Parser:
         return ('PRINT', expr)
 
     def expression(self):
-        left = self.term()
+        return self.comparison()
 
-        while self.current() and self.current()[0] == 'OP' and self.current()[1] in ('==','!=','<','>','<=','>='):
+    def comparison(self):
+        left = self.add_sub()
+        while self.current() and self.current()[0] == 'OP' and self.current()[1] in ('==', '!=', '<', '>', '<=', '>='):
             op = self.eat('OP')[1]
-            right = self.term()
+            right = self.add_sub()
             left = ('BINOP', op, left, right)
-
-        while self.current() and self.current()[0] == 'OP' and self.current()[1] in ('+','-'):
-            op = self.eat('OP')[1]
-            right = self.term()
-            left = ('BINOP', op, left, right)
-
         return left
 
-    def term(self):
-        left = self.factor()
-
-        while self.current() and self.current()[1] in ('*', '/'):
+    def add_sub(self):
+        left = self.mul_div()
+        while self.current() and self.current()[0] == 'OP' and self.current()[1] in ('+', '-'):
             op = self.eat('OP')[1]
-            right = self.factor()
+            right = self.mul_div()
             left = ('BINOP', op, left, right)
+        return left
 
+    def mul_div(self):
+        left = self.exponent()
+        while self.current() and self.current()[0] == 'OP' and self.current()[1] in ('*', '/', '//'):
+            op = self.eat('OP')[1]
+            right = self.exponent()
+            left = ('BINOP', op, left, right)
+        return left
+
+    def exponent(self):
+        left = self.factor()
+        while self.current() and self.current()[0] == 'OP' and self.current()[1] == '**':
+            self.eat('OP')
+            right = self.factor()
+            left = ('BINOP', '**', left, right)
         return left
 
     def factor(self):
         tok = self.current()
 
+        # Unary minus
         if tok[0] == 'OP' and tok[1] == '-':
             self.eat('OP')
             node = self.factor()
             return ('BINOP', '-', ('NUMBER', 0), node)
 
+        # Parentheses
         if tok[0] == 'LPAREN':
             self.eat('LPAREN')
             expr = self.expression()
             self.eat('RPAREN')
             return expr
 
+        # Number literal
         if tok[0] == 'NUMBER':
             return ('NUMBER', int(self.eat('NUMBER')[1]))
 
+        # Boolean literals
+        if tok[0] == 'TRUE':
+            self.eat('TRUE')
+            return ('NUMBER', 1)
+        if tok[0] == 'FALSE':
+            self.eat('FALSE')
+            return ('NUMBER', 0)
+
+        # String literal with escapes
         if tok[0] == 'STRING':
             text = self.eat('STRING')[1]
             text = text[1:-1]
             text = bytes(text, "utf-8").decode("unicode_escape")
             return ('STRING', text)
 
-        if tok[0] == 'TRUE':
-            self.eat('TRUE')
-            return ('NUMBER', 1)
-
-        if tok[0] == 'FALSE':
-            self.eat('FALSE')
-            return ('NUMBER', 0)
-
+        # List
         if tok[0] == 'LBRACKET':
             self.eat('LBRACKET')
             elements = []
-
             if self.current() and self.current()[0] != 'RBRACKET':
                 elements.append(self.expression())
-
                 while self.current() and self.current()[0] == 'COMMA':
                     self.eat('COMMA')
                     elements.append(self.expression())
-
             self.eat('RBRACKET')
             return ('LIST', elements)
 
+        # Map
         if tok[0] == 'LBRACE':
             self.eat('LBRACE')
             pairs = []
-
             if self.current() and self.current()[0] != 'RBRACE':
                 key = self.expression()
                 self.eat('COLON')
                 value = self.expression()
                 pairs.append((key, value))
-
                 while self.current() and self.current()[0] == 'COMMA':
                     self.eat('COMMA')
                     key = self.expression()
                     self.eat('COLON')
                     value = self.expression()
                     pairs.append((key, value))
-
             self.eat('RBRACE')
             return ('MAP', pairs)
 
+        # Variable or function call
         if tok[0] == 'IDENT':
             name = self.eat('IDENT')[1]
-
             if self.current() and self.current()[0] == 'LBRACKET':
                 self.eat('LBRACKET')
                 index = self.expression()
                 self.eat('RBRACKET')
                 return ('INDEX', name, index)
-
             if self.current() and self.current()[0] == 'LPAREN':
                 self.eat('LPAREN')
                 args = []
@@ -326,9 +336,9 @@ class Parser:
                         self.eat('COMMA')
                 self.eat('RPAREN')
                 return ('FUNC_CALL', name, args)
-
             return ('VAR', name)
 
+        # SEND / RECV
         if tok[0] in ('SEND', 'RECV'):
             func_name = self.eat(tok[0])[0].lower()
             arg = self.factor()

@@ -305,7 +305,9 @@ class Interpreter:
             if op == '+': return l + r
             if op == '-': return l - r
             if op == '*': return l * r
-            if op == '/': return l // r
+            if op == '/': return l / r
+            if op == '//': return l // r
+            if op == '**': return l ** r
 
             if op == '==': return int(l == r)
             if op == '!=': return int(l != r)
