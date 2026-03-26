@@ -13,6 +13,7 @@ TOKEN_SPEC = [
     ('RBRACE',   r'\}'),
     ('COLON',    r'\:'),
     ('OP',       r'==|!=|<=|>=|<|>|\+|\-|\*|/|='),
+    ('COMMENT',  r'\#.*'),
     ('NEWLINE',  r'\n'),
     ('SKIP',     r'[ \t]+'),
 ]
@@ -62,7 +63,7 @@ def tokenize(code):
                     if tok_type == 'IDENT' and text in KEYWORDS:
                         tok_type = text.upper()
 
-                    if tok_type != 'SKIP':
+                    if tok_type not in ('SKIP', 'COMMENT'):
                         tokens.append((tok_type, text))
 
                     pos = match.end(0)
