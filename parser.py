@@ -246,6 +246,17 @@ class Parser:
     def factor(self):
         tok = self.current()
 
+        if tok[0] == 'OP' and tok[1] == '-':
+            self.eat('OP')
+            node = self.factor()
+            return ('BINOP', '-', ('NUMBER', 0), node)
+
+        if tok[0] == 'LPAREN':
+            self.eat('LPAREN')
+            expr = self.expression()
+            self.eat('RPAREN')
+            return expr
+
         if tok[0] == 'NUMBER':
             return ('NUMBER', int(self.eat('NUMBER')[1]))
 

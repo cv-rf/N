@@ -1,7 +1,2 @@
-x = true
-y = false
-
-if y
-        print "yes"
-else
-        print "no"
+x = -(3+2)
+print x
