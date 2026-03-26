@@ -8,21 +8,10 @@ class Parser:
             return self.tokens[self.pos]
         return None
 
-    def index_assignment(self):
-        name = self.eat('IDENT')[1]
-        self.eat('LBRACKET')
-        index = self.expression()
-        self.eat('RBRACKET')
-        self.eat('OP')  # =
-        value = self.expression()
-        self.eat('NEWLINE')
-
-        return ('INDEX_ASSIGN', name, index, value)
-
     def eat(self, token_type=None):
         tok = self.current()
         if tok is None:
-            return None
+            raise SyntaxError("Unexpected EOF")
 
         if token_type and tok[0] != token_type:
             raise SyntaxError(f"Expected {token_type}, got {tok}")
@@ -30,114 +19,64 @@ class Parser:
         self.pos += 1
         return tok
 
+    def eat_newlines(self):
+        while self.current() and self.current()[0] == 'NEWLINE':
+            self.eat('NEWLINE')
+
     def parse(self):
+        self.eat_newlines()
         statements = []
         while self.current():
-            while self.current() and self.current()[0] == 'NEWLINE':
-                self.eat('NEWLINE')
-
-            if self.current() is None:
-                break
-
-            stmt = self.statement()
-            statements.append(stmt)
-
-            if self.current() and self.current()[0] == 'NEWLINE':
-                self.eat('NEWLINE')
+            statements.append(self.statement())
+            self.eat_newlines()
         return statements
-
-    def peek(self):
-        if self.pos + 1 < len(self.tokens):
-            return self.tokens[self.pos + 1]
-        return None
 
     def statement(self):
         tok = self.current()
 
+        if not tok:
+            raise SyntaxError("Unexpected EOF")
+
         if tok[0] == 'IDENT':
-            # Index assignment
-            if self.peek() and self.peek()[0] == 'LBRACKET' and self.peek(2) and self.peek(2)[0] == 'OP' and self.peek(2)[1] == '=':
-                node = self.index_assignment()
-            # Function call
-            elif self.peek() and self.peek()[0] == 'LPAREN':
-                node = self.factor()  # returns FUNC_CALL
-            # Simple assignment
-            elif self.peek() and self.peek()[0] == 'OP' and self.peek()[1] == '=':
-                node = self.assignment()
-            else:
-                raise SyntaxError(f"Unexpected IDENT usage: {tok}")
-            if self.current() and self.current()[0] == 'NEWLINE':
-                self.eat('NEWLINE')
-            return node
+            return self.ident_statement()
 
-        elif tok[0] in ('FUNC', 'BREAK', 'CONTINUE', 'RETURN', 'IF', 'LOOP', 'PRINT', 'SEND', 'RECV', 'CONNECT', 'UDP_CONNECT'):
-            if tok[0] == 'FUNC':
-                node = self.func_def()
-            elif tok[0] == 'BREAK':
-                self.eat('BREAK')
-                node = ('BREAK',)
-            elif tok[0] == 'CONTINUE':
-                self.eat('CONTINUE')
-                node = ('CONTINUE',)
-            elif tok[0] == 'RETURN':
-                self.eat('RETURN')
-                expr = self.expression()
-                node = ('RETURN', expr)
-            elif tok[0] in ('CONNECT', 'UDP_CONNECT'):
-                kw = self.eat(tok[0])[0]
-                host_tok = self.eat('STRING')
-                host_node = ('STRING', host_tok[1][1:-1])
-                port_tok = self.eat('NUMBER')
-                port_node = ('NUMBER', int(port_tok[1]))
-                node = (kw, host_node, port_node)
-            elif tok[0] == 'PRINT':
-                node = self.print_stmt()
-            elif tok[0] == 'SEND':
-                self.eat('SEND')
-                arg = self.factor()
-                node = ('SEND', arg)
-            elif tok[0] == 'RECV':
-                self.eat('RECV')
-                arg = self.expression()
-                node = ('RECV', arg)
-            elif tok[0] == 'IF':
-                node = self.if_stmt()
-            elif tok[0] == 'LOOP':
-                node = self.loop_stmt()
-            else:
-                raise SyntaxError(f"Unhandled keyword: {tok}")
+        if tok[0] == 'RETURN':
+            self.eat('RETURN')
+            return ('RETURN', self.expression())
 
-            if self.current() and self.current()[0] == 'NEWLINE':
-                self.eat('NEWLINE')
-            return node
+        if tok[0] == 'BREAK':
+            self.eat('BREAK')
+            return ('BREAK',)
 
-        elif tok[0] == 'STRING':
-            text = self.eat('STRING')[1]
-            if self.current() and self.current()[0] == 'NEWLINE':
-                self.eat('NEWLINE')
-            return ('STRING', text[1:-1])
+        if tok[0] == 'CONTINUE':
+            self.eat('CONTINUE')
+            return ('CONTINUE',)
 
-        raise SyntaxError(f"Unknown statement: {tok}")
+        raise SyntaxError(f"Unexpected token in statement: {tok}")
 
-    def assignment(self):
+    def ident_statement(self):
         name = self.eat('IDENT')[1]
-        self.eat('OP')  # '='
+        tok = self.current()
 
-        if self.current()[0] == 'BUFFER':
-            self.eat('BUFFER')
-            size = self.expression()
-            self.eat('NEWLINE')
-            return ('BUFFER_ALLOC', name, size)
+        if tok and tok[0] == 'LBRACKET':
+            return self.index_assignment(name)
 
-        expr = self.expression()
-        self.eat('NEWLINE')
-        return ('ASSIGN', name, expr)
+        if tok and tok[0] == 'OP' and tok[1] == '=':
+            self.eat('OP')
+            return ('ASSIGN', name, self.expression())
 
-    def print_stmt(self):
-        self.eat('PRINT')
-        expr = self.expression()
-        self.eat('NEWLINE')
-        return ('PRINT', expr)
+        if tok and tok[0] == 'LPAREN':
+            return ('CALL', name, self.func_args())
+
+        raise SyntaxError(f"Invalid IDENT usage: {name}")
+
+    def index_assignment(self, name):
+        self.eat('LBRACKET')
+        index = self.expression()
+        self.eat('RBRACKET')
+        self.eat('OP')
+        value = self.expression()
+        return ('INDEX_ASSIGN', name, index, value)
 
     def expression(self):
         return self.comparison()
@@ -177,91 +116,99 @@ class Parser:
     def factor(self):
         tok = self.current()
 
-        # Unary minus
+        if tok is None:
+            raise SyntaxError("Unexpected EOF")
+
         if tok[0] == 'OP' and tok[1] == '-':
             self.eat('OP')
-            node = self.factor()
-            return ('BINOP', '-', ('NUMBER', 0), node)
+            return ('BINOP', '-', ('NUMBER', 0), self.factor())
 
-        # Parentheses
         if tok[0] == 'LPAREN':
             self.eat('LPAREN')
             expr = self.expression()
             self.eat('RPAREN')
             return expr
 
-        # Number literal
         if tok[0] == 'NUMBER':
             return ('NUMBER', int(self.eat('NUMBER')[1]))
 
-        # Boolean literals
         if tok[0] == 'TRUE':
             self.eat('TRUE')
-            return ('NUMBER', 1)
+            return ('BOOL', True)
+
         if tok[0] == 'FALSE':
             self.eat('FALSE')
-            return ('NUMBER', 0)
+            return ('BOOL', False)
 
-        # String literal with escapes
         if tok[0] == 'STRING':
-            text = self.eat('STRING')[1]
-            text = text[1:-1]
-            text = bytes(text, "utf-8").decode("unicode_escape")
-            return ('STRING', text)
+            return ('STRING', self._strip_string(self.eat('STRING')[1]))
 
-        # List
         if tok[0] == 'LBRACKET':
-            self.eat('LBRACKET')
-            elements = []
-            if self.current() and self.current()[0] != 'RBRACKET':
-                elements.append(self.expression())
-                while self.current() and self.current()[0] == 'COMMA':
-                    self.eat('COMMA')
-                    elements.append(self.expression())
-            self.eat('RBRACKET')
-            return ('LIST', elements)
+            return self.list_expr()
 
-        # Map
         if tok[0] == 'LBRACE':
-            self.eat('LBRACE')
-            pairs = []
-            if self.current() and self.current()[0] != 'RBRACE':
-                key = self.expression()
-                self.eat('COLON')
-                value = self.expression()
-                pairs.append((key, value))
-                while self.current() and self.current()[0] == 'COMMA':
-                    self.eat('COMMA')
-                    key = self.expression()
-                    self.eat('COLON')
-                    value = self.expression()
-                    pairs.append((key, value))
-            self.eat('RBRACE')
-            return ('MAP', pairs)
+            return self.map_expr()
 
-        # Variable or function call
         if tok[0] == 'IDENT':
             name = self.eat('IDENT')[1]
+
             if self.current() and self.current()[0] == 'LBRACKET':
                 self.eat('LBRACKET')
                 index = self.expression()
                 self.eat('RBRACKET')
                 return ('INDEX', name, index)
+
             if self.current() and self.current()[0] == 'LPAREN':
-                self.eat('LPAREN')
-                args = []
-                while self.current() and self.current()[0] != 'RPAREN':
-                    args.append(self.expression())
-                    if self.current() and self.current()[0] == 'COMMA':
-                        self.eat('COMMA')
-                self.eat('RPAREN')
-                return ('FUNC_CALL', name, args)
+                return ('CALL', name, self.func_args())
+
             return ('VAR', name)
 
-        # SEND / RECV
-        if tok[0] in ('SEND', 'RECV'):
-            func_name = self.eat(tok[0])[0].lower()
-            arg = self.factor()
-            return (func_name.upper(), arg)
+        raise SyntaxError(f"Unexpected token in expression: {tok}")
 
-        raise SyntaxError(f"Unexpected token: {tok}")
+    def func_args(self):
+        self.eat('LPAREN')
+        args = []
+
+        while self.current() and self.current()[0] != 'RPAREN':
+            args.append(self.expression())
+            if self.current() and self.current()[0] == 'COMMA':
+                self.eat('COMMA')
+
+        self.eat('RPAREN')
+        return args
+
+    def list_expr(self):
+        self.eat('LBRACKET')
+        items = []
+
+        if self.current() and self.current()[0] != 'RBRACKET':
+            items.append(self.expression())
+            while self.current() and self.current()[0] == 'COMMA':
+                self.eat('COMMA')
+                items.append(self.expression())
+
+        self.eat('RBRACKET')
+        return ('LIST', items)
+
+    def map_expr(self):
+        self.eat('LBRACE')
+        pairs = []
+
+        if self.current() and self.current()[0] != 'RBRACE':
+            key = self.expression()
+            self.eat('COLON')
+            value = self.expression()
+            pairs.append((key, value))
+
+            while self.current() and self.current()[0] == 'COMMA':
+                self.eat('COMMA')
+                key = self.expression()
+                self.eat('COLON')
+                value = self.expression()
+                pairs.append((key, value))
+
+        self.eat('RBRACE')
+        return ('MAP', pairs)
+
+    def _strip_string(self, s):
+        return s[1:-1] if s.startswith('"') else s

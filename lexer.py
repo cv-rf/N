@@ -3,80 +3,79 @@ import re
 TOKEN_SPEC = [
     ('NUMBER',   r'\d+'),
     ('STRING',   r'"(?:\\.|[^"\\\n])*"'),
-    ('IDENT',    r'[A-Za-z_][A-Za-z0-9_]*'),
+
     ('LBRACKET', r'\['),
     ('RBRACKET', r'\]'),
     ('LPAREN',   r'\('),
     ('RPAREN',   r'\)'),
-    ('COMMA',    r'\,'),
+    ('COMMA',    r','),
     ('LBRACE',   r'\{'),
     ('RBRACE',   r'\}'),
-    ('COLON',    r'\:'),
+    ('COLON',    r':'),
+
+    ('IDENT',    r'[A-Za-z_][A-Za-z0-9_]*'),
     ('OP',       r'==|!=|<=|>=|\+=|-=|\*=|/=|//|<|>|\+|\-|\*|/|='),
     ('COMMENT',  r'\#.*'),
-    ('NEWLINE',  r'\n'),
     ('SKIP',     r'[ \t]+'),
 ]
 
-KEYWORDS = {
-    'print', 'buffer', 'send', 'recv',
-    'if', 'else', 'loop',
-    'connect', 'udp_connect',
-    'func', 'return',
-    'break', 'continue',
-    'true', 'false'
-}
+TOKEN_SPEC = [(name, re.compile(pattern)) for name, pattern in TOKEN_SPEC]
 
 def tokenize(code):
     tokens = []
+    indent_stack = [0]
     lines = code.split('\n')
 
-    indent_stack = [0]
+    for line_no, line in enumerate(lines, start=1):
 
-    for line in lines:
-        if not line.strip():
+        if line.strip() == "":
+            tokens.append(('NEWLINE', '\n', line_no, 0))
             continue
 
-        indent = len(line) - len(line.lstrip(' '))
+        stripped = line.lstrip(' ')
+        indent = len(line) - len(stripped)
 
         if indent % 8 != 0:
-            raise SyntaxError("Indent must be multiple of 8 spaces")
+            raise SyntaxError(f"Line {line_no}: indent must be multiple of 8 spaces")
 
-        indent_level = indent // 8
+        if indent > indent_stack[-1]:
+            indent_stack.append(indent)
+            tokens.append(('INDENT', '', line_no, pos))
 
-        if indent_level > indent_stack[-1]:
-            tokens.append(('INDENT', indent_level))
-            indent_stack.append(indent_level)
-
-        while indent_level < indent_stack[-1]:
-            indent_stack.pop()
-            tokens.append(('DEDENT', indent_level))
+        else:
+            while indent < indent_stack[-1]:
+                indent_stack.pop()
+                tokens.append(('DEDENT', '', line_no, pos))
 
         pos = indent
+
         while pos < len(line):
             match = None
-            for tok_type, pattern in TOKEN_SPEC:
-                regex = re.compile(pattern)
+
+            for tok_type, regex in TOKEN_SPEC:
                 match = regex.match(line, pos)
-                if match:
-                    text = match.group(0)
+                if not match:
+                    continue
 
-                    if tok_type == 'IDENT' and text in KEYWORDS:
-                        tok_type = text.upper()
+                text = match.group(0)
 
-                    if tok_type not in ('SKIP', 'COMMENT'):
-                        tokens.append((tok_type, text))
-
-                    pos = match.end(0)
+                if tok_type in ('SKIP', 'COMMENT'):
+                    pos = match.end()
                     break
 
-            if not match:
-                raise SyntaxError(f"Unexpected character: {line[pos]}")
+                tokens.append((tok_type, text, line_no, pos))
+                pos = match.end()
+                break
 
-        tokens.append(('NEWLINE', '\n'))
+            if not match:
+                raise SyntaxError(
+                    f"Line {line_no}, col {pos}: unexpected '{line[pos]}'"
+                )
+
+        tokens.append(('NEWLINE', '\n', line_no, len(line)))
 
     while len(indent_stack) > 1:
         indent_stack.pop()
-        tokens.append(('DEDENT', 0))
+        tokens.append(('DEDENT', '', lines[-1] if lines else 0, 0))
 
     return tokens
