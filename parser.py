@@ -262,7 +262,9 @@ class Parser:
 
         if tok[0] == 'STRING':
             text = self.eat('STRING')[1]
-            return ('STRING', text[1:-1])
+            text = text[1:-1]
+            text = bytes(text, "utf-8").decode("unicode_escape")
+            return ('STRING', text)
 
         if tok[0] == 'TRUE':
             self.eat('TRUE')

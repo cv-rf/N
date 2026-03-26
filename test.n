@@ -1,2 +1,6 @@
-x = -(3+2)
+x = "Line1\nLine2"
+y = "Quote: \"Hello\""
+z = "Backslash: \\"
 print x
+print y
+print z
