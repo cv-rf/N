@@ -22,6 +22,7 @@ func isDigit(c)
         return c >= "0" && c <= "9"
 
 func isAlpha(c)
+        c = toString(c)
         return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z")
 
 func makeToken(type, value)

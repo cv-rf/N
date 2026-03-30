@@ -255,11 +255,11 @@ class Interpreter:
             if op == "&&":
                 left = self.eval(l)
                 if not self.is_truthy(left):
-                    return left
+                    return False
                 return self.eval(r)
             if op == "||":
                 left = self.eval(l)
-                if not self.is_truthy(left):
+                if self.is_truthy(left):
                     return left
                 return self.eval(r)
 
