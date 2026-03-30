@@ -234,14 +234,6 @@ class Parser:
         if tok[0] == 'NUMBER':
             return ('NUMBER', int(self.eat('NUMBER')[1]))
 
-        if tok[0] == 'TRUE':
-            self.eat('TRUE')
-            return ('BOOL', True)
-
-        if tok[0] == 'FALSE':
-            self.eat('FALSE')
-            return ('BOOL', False)
-
         if tok[0] == 'STRING':
             return ('STRING', self._strip_string(self.eat('STRING')[1]))
 

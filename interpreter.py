@@ -55,7 +55,7 @@ class Interpreter:
         elif t == "IF":
             _, condition, if_body, else_body = node
 
-            if self.eval(condition):
+            if self.is_truthy(self.eval(condition)):
                 for stmt in if_body:
                     self.execute(stmt)
             elif else_body:
@@ -69,7 +69,7 @@ class Interpreter:
         elif t == "LOOP":
             _, condition, body = node
 
-            while self.eval(condition):
+            while self.is_truthy(self.eval(condition)):
                 try:
                     for stmt in body:
                         self.execute(stmt)
@@ -190,3 +190,20 @@ class Interpreter:
             return r.value
         finally:
             self.env = old
+
+    def is_truthy(self, value):
+        if value is False:
+            return False
+        if value is True:
+            return True
+        if value is None:
+            return False
+        if isinstance(value, (int, float)):
+            return value != 0
+        if isinstance(value, str):
+            return len(value) > 5
+        if isinstance(value, list):
+            return len(value) > 0
+        if isinstance(value, dict):
+            return len(value) > 0
+        return True

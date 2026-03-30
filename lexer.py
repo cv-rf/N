@@ -21,6 +21,7 @@ TOKEN_SPEC = [
 
 TOKEN_SPEC = [(name, re.compile(pattern)) for name, pattern in TOKEN_SPEC]
 
+
 def tokenize(code):
     tokens = []
     indent_stack = [0]
@@ -29,23 +30,25 @@ def tokenize(code):
     for line_no, line in enumerate(lines, start=1):
 
         if line.strip() == "":
-            tokens.append(('NEWLINE', '\n', line_no, 0))
             continue
 
         stripped = line.lstrip(' ')
         indent = len(line) - len(stripped)
+        pos = 0
 
         if indent % 8 != 0:
             raise SyntaxError(f"Line {line_no}: indent must be multiple of 8 spaces")
 
         if indent > indent_stack[-1]:
             indent_stack.append(indent)
-            tokens.append(('INDENT', '', line_no, pos))
+            tokens.append(('INDENT', '', line_no, 0))
 
-        else:
-            while indent < indent_stack[-1]:
-                indent_stack.pop()
-                tokens.append(('DEDENT', '', line_no, pos))
+        while indent < indent_stack[-1]:
+            indent_stack.pop()
+            tokens.append(('DEDENT', '', line_no, 0))
+
+        if indent != indent_stack[-1]:
+            raise SyntaxError(f"Line {line_no}: invalid indentation level")
 
         pos = indent
 
@@ -76,6 +79,6 @@ def tokenize(code):
 
     while len(indent_stack) > 1:
         indent_stack.pop()
-        tokens.append(('DEDENT', '', lines[-1] if lines else 0, 0))
+        tokens.append(('DEDENT', '', len(lines), 0))
 
     return tokens
