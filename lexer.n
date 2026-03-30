@@ -35,6 +35,19 @@ func readString(code, i)
         i = i + 1
         return [helper.makeToken("STRING", s), i]
 
+func readOp(code, i)
+        c = code[i]
+        next = ""
+        if i + 1 < len(code)
+                next = code[i + 1]
+        
+        two = c + next
+
+        if two == "==" || two == "!=" || two == "<=" || two == ">=" || two == "&&" || two == "||" || two == "//" || two == "**"
+                return [helper.makeToken("OP", two), i + 2]
+        
+        return [helper.makeToken("OP", c), i + 1]
+
 func tokenize(code)
         tokens = []
         i = 0
@@ -65,6 +78,7 @@ func tokenize(code)
                         i = result[1]
 
                 else
-                        tokens = append(tokens, helper.makeToken("OP", c))
-                        i = i + 1
+                        result = readOp(code, i)
+                        tokens = append(tokens, result[0])
+                        i = result[1]
         return tokens
