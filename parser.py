@@ -253,6 +253,10 @@ class Parser:
         if tok[0] == 'OP' and tok[1] == '-':
             self.eat('OP')
             return ('BINOP', '-', ('NUMBER', 0), self.factor())
+        
+        if tok[0] == 'OP' and tok[1] == '!':
+            self.eat('OP')
+            return ('UNOP', '!', self.factor())
 
         if tok[0] == 'LPAREN':
             self.eat('LPAREN')

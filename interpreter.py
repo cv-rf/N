@@ -179,6 +179,12 @@ class Interpreter:
         if t == "LIST":
             return [self.eval(x) for x in node[1]]
         
+        if t == "UNOP":
+            _, op, operand = node
+            val = self.eval(operand)
+            if op == "!":
+                return not self.is_truthy(val)
+        
         if t == "GETATTR":
             _, obj, name = node
             o = self.eval(obj)
@@ -228,6 +234,9 @@ class Interpreter:
             if op == "+":  return a + b
             if op == "-":  return a - b
             if op == "*":  return a * b
+            if op == "%":  return a % b
+            if op == "|":  return a | b
+            if op == "&":  return a & b
             if op == "/":  return a / b
             if op == "//": return a // b
             if op == "**": return a ** b
