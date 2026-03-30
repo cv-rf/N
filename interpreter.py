@@ -42,8 +42,11 @@ class Interpreter:
         self.builtins = STDLIB
 
     def run(self, ast):
-        for stmt in ast:
-            self.execute(stmt)
+        try:
+            for stmt in ast:
+                self.execute(stmt)
+        except ReturnException:
+            raise Exception("Return outside function")
 
     def execute(self, node):
         t = node[0]
@@ -90,9 +93,6 @@ class Interpreter:
         elif t == "CONTINUE":
             raise ContinueException()
 
-        elif t == "CALL":
-            return self.eval(node)
-
         else:
             raise Exception(f"Unknown statement: {node}")
 
@@ -115,7 +115,10 @@ class Interpreter:
             return [self.eval(x) for x in node[1]]
 
         if t == "MAP":
-            return {self.eval(k): self.eval(v) for k, v in node[1]}
+            return {
+                self.eval(k): self.eval(v)
+                for k, v in node[1]
+            }
 
         if t == "INDEX":
             _, name, idx_expr = node
@@ -129,7 +132,7 @@ class Interpreter:
                 return container[idx]
 
             if isinstance(container, dict):
-                return container[self.eval(idx_expr)]
+                return container[idx]
 
             raise Exception("Invalid indexing target")
 
@@ -138,19 +141,19 @@ class Interpreter:
             a = self.eval(l)
             b = self.eval(r)
 
-            if op == "+": return a + b
-            if op == "-": return a - b
-            if op == "*": return a * b
-            if op == "/": return a / b
+            if op == "+":  return a + b
+            if op == "-":  return a - b
+            if op == "*":  return a * b
+            if op == "/":  return a / b
             if op == "//": return a // b
             if op == "**": return a ** b
 
-            if op == "==": return int(a == b)
-            if op == "!=": return int(a != b)
-            if op == "<": return int(a < b)
-            if op == ">": return int(a > b)
-            if op == "<=": return int(a <= b)
-            if op == ">=": return int(a >= b)
+            if op == "==": return a == b
+            if op == "!=": return a != b
+            if op == "<":  return a < b
+            if op == ">":  return a > b
+            if op == "<=": return a <= b
+            if op == ">=": return a >= b
 
         if t == "CALL":
             return self.call(node)
@@ -201,7 +204,7 @@ class Interpreter:
         if isinstance(value, (int, float)):
             return value != 0
         if isinstance(value, str):
-            return len(value) > 5
+            return len(value) > 0
         if isinstance(value, list):
             return len(value) > 0
         if isinstance(value, dict):
