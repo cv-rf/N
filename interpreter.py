@@ -2,11 +2,6 @@ from stdlib import STDLIB, Runtime
 from lexer import tokenize
 from parser import Parser
 
-class ReturnException(Exception):
-    def __init__(self, value):
-        self.value = value
-
-
 class BreakException(Exception):
     pass
 
@@ -35,6 +30,13 @@ class Env:
     def set(self, name, value):
         self.vars[name] = value
 
+class Frame:
+    def __init__(self, env, name="<anon>"):
+        self.env = env
+        self.name = name
+        self.return_value = None
+        self.should_return = False
+
 
 class Buffer:
     def __init__(self, size):
@@ -45,17 +47,30 @@ class Interpreter:
     def __init__(self):
         self.global_env = Env()
         self.env = self.global_env
+        self.frames = []
         self.runtime = Runtime()
         self.runtime.interpreter = self
         self.global_env.builtins = STDLIB.copy()
         self.modules = {}
+    
+    def push_frame(self, env):
+        frame = {"env": env, "return": None, "should_return": False}
+        self.frames.append(frame)
+        self.env = env
+    
+    def pop_frame(self):
+        frame = self.frames.pop()
+
+        if self.frames:
+            self.env = self.frames[-1]["env"]
+        else:
+            self.env = self.global_env
+        
+        return frame
 
     def run(self, ast):
-        try:
-            for stmt in ast:
-                self.execute(stmt)
-        except ReturnException:
-            raise Exception("Return outside function")
+        for stmt in ast:
+            self.execute(stmt)
 
     def _import_module(self, module):
         if module in self.modules:
@@ -106,7 +121,7 @@ class Interpreter:
 
         elif t == "FUNC_DEF":
             _, name, params, body = node
-            self.env.set(name, ("FUNC", params, body))
+            self.env.set(name, ("FUNC", params, body, self.env))
 
         elif t == "LOOP":
             _, condition, body = node
@@ -121,10 +136,15 @@ class Interpreter:
                     break
 
         elif t == "RETURN":
+            if not self.frames:
+                raise Exception("Return outside function")
+            
             _, expr = node
-            if expr is None:
-                raise ReturnException(None)
-            raise ReturnException(self.eval(expr))
+            value = self.eval(expr) if expr else None
+
+            frame = self.frames[-1]
+            frame["return"] = value
+            frame["should_return"] = True
 
         elif t == "BREAK":
             raise BreakException()
@@ -252,23 +272,29 @@ class Interpreter:
                 return fn(*evaluated_args)
 
         if isinstance(fn, tuple) and fn[0] == "FUNC":
-            _, params, body = fn
+            _, params, body, closure_env = fn
 
             if len(params) != len(evaluated_args):
                 raise Exception("Argument mismatch")
 
-            child = Env(self.env)
+            frame_env = Env(closure_env)
 
             for p, a in zip(params, evaluated_args):
-                child.set(p, a)
+                frame_env.set(p, a)
+
+            self.push_frame(frame_env)
 
             try:
                 for stmt in body:
-                    self.execute_with_env(stmt, child)
-            except ReturnException as r:
-                return r.value
+                    self.execute(stmt)
 
-            return None
+                    if self.frames[-1]["should_return"]:
+                        break
+
+            finally:
+                frame = self.pop_frame()
+
+            return frame["return"]
 
         raise Exception(f"{name_node} is not a function")
 
