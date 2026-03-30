@@ -1,7 +1,4 @@
-func makeAdder(x)
-        func add(y)
-                return x + y
-        return add
+import "helper"
 
-a = makeAdder(10)
-print a(5)
+x = 2
+print helper.isDigit(x)

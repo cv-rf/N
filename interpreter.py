@@ -213,7 +213,7 @@ class Interpreter:
                 return container[idx]
 
             if isinstance(container, str):
-                return container[idx]
+                return str(container[idx])
 
             if isinstance(container, Env):
                 return container.get(idx)
@@ -232,12 +232,16 @@ class Interpreter:
             if op == "//": return a // b
             if op == "**": return a ** b
 
-            if op == "==": return a == b
-            if op == "!=": return a != b
-            if op == "<":  return a < b
-            if op == ">":  return a > b
-            if op == "<=": return a <= b
-            if op == ">=": return a >= b
+            if op in [">", "<", ">=", "<=", "==", "!="]:
+                if type(a) != type(b):
+                    raise Exception(f"Type mismatch: {type(a)} vs {type(b)}")
+
+                if op == "==": return a == b
+                if op == "!=": return a != b
+                if op == "<":  return a < b
+                if op == ">":  return a > b
+                if op == "<=": return a <= b
+                if op == ">=": return a >= b
 
             if op == "&&":
                 left = self.eval(l)
