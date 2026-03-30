@@ -38,6 +38,13 @@ class Parser:
             raise SyntaxError("Unexpected EOF")
 
         if tok[0] == 'IDENT':
+            if tok[1] == 'if':
+                return self.if_statement()
+
+            if tok[1] == 'else':
+                return SyntaxError("else without if")
+            
+
             return self.ident_statement()
 
         if tok[0] == 'RETURN':
@@ -54,6 +61,48 @@ class Parser:
 
         raise SyntaxError(f"Unexpected token in statement: {tok}")
 
+    def if_statement(self):
+        self.eat("IDENT")
+        condition = self.expression()
+
+        self.eat_newlines()
+        self.eat("INDENT")
+
+        if_body = []
+        while self.current() and self.current()[0] != "DEDENT":
+            if_body.append(self.statement())
+            self.eat_newlines()
+
+        self.eat("DEDENT")
+
+        else_body = None
+
+        if (
+            self.current()
+            and self.current()[0] == "IDENT"
+            and self.current()[1] == "else"
+        ):
+            self.eat("IDENT")
+
+            if (
+                self.current()
+                and self.current()[0] == "IDENT"
+                and self.current()[1] == "if"
+            ):
+                else_body = [self.if_statement()]
+            else:
+                self.eat_newlines()
+                self.eat("INDENT")
+
+                else_body = []
+                while self.current() and self.current()[0] != "DEDENT":
+                    else_body.append(self.statement())
+                    self.eat_newlines()
+
+                self.eat("DEDENT")
+
+        return ("IF", condition, if_body, else_body)
+
     def ident_statement(self):
         name = self.eat('IDENT')[1]
         tok = self.current()
@@ -67,6 +116,15 @@ class Parser:
 
         if tok and tok[0] == 'LPAREN':
             return ('CALL', name, self.func_args())
+        
+        if tok and tok[0] not in ('NEWLINE', 'DEDENT'):
+            args = [self.expression()]
+
+            while self.current() and self.current()[0] == 'COMMA':
+                self.eat('COMMA')
+                args.append(self.expression())
+
+            return ('CALL', name, args)
 
         raise SyntaxError(f"Invalid IDENT usage: {name}")
 

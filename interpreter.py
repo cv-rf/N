@@ -52,6 +52,16 @@ class Interpreter:
             _, name, expr = node
             self.env.set(name, self.eval(expr))
 
+        elif t == "IF":
+            _, condition, if_body, else_body = node
+
+            if self.eval(condition):
+                for stmt in if_body:
+                    self.execute(stmt)
+            elif else_body:
+                for stmt in else_body:
+                    self.execute(stmt)
+
         elif t == "RETURN":
             _, expr = node
             raise ReturnException(self.eval(expr))
@@ -63,7 +73,7 @@ class Interpreter:
             raise ContinueException()
 
         elif t == "CALL":
-            return self.eval(node)
+            self.eval(node)
 
         else:
             raise Exception(f"Unknown statement: {node}")

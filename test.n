@@ -1,4 +1,8 @@
-x = 10
-print(x)
-connect("127.0.0.1", 9998)
-send([1,2,3])
+x = 3
+
+if x > 5
+        print 5
+else if x > 2
+        print 2
+else
+        print 0
