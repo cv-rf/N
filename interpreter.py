@@ -62,6 +62,10 @@ class Interpreter:
                 for stmt in else_body:
                     self.execute(stmt)
 
+        elif t == "FUNC_DEF":
+            _, name, params, body = node
+            self.env.set(name, ("FUNC", params, body))
+
         elif t == "LOOP":
             _, condition, body = node
 
@@ -76,6 +80,8 @@ class Interpreter:
 
         elif t == "RETURN":
             _, expr = node
+            if expr is None:
+                raise ReturnException(None)
             raise ReturnException(self.eval(expr))
 
         elif t == "BREAK":
@@ -85,7 +91,7 @@ class Interpreter:
             raise ContinueException()
 
         elif t == "CALL":
-            self.eval(node)
+            return self.eval(node)
 
         else:
             raise Exception(f"Unknown statement: {node}")

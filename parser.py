@@ -43,6 +43,23 @@ class Parser:
 
             if tok[1] == 'loop':
                 return self.loop_statement()
+            
+            if tok[1] == 'func':
+                return self.func_def()
+
+            if tok[1] == 'return':
+                self.eat('IDENT')
+                if self.current() and self.current()[0] not in ('NEWLINE', 'DEDENT'):
+                    return ('RETURN', self.expression())
+                return ('RETURN', None)
+            
+            if tok[1] == 'break':
+                self.eat('IDENT')
+                return ('BREAK',)
+            
+            if tok[1] == 'continue':
+                self.eat('IDENT')
+                return ('CONTINUE',)
 
             if tok[1] == 'else':
                 return SyntaxError("else without if")
@@ -134,6 +151,26 @@ class Parser:
         
         self.eat("DEDENT")
         return body
+    
+    def func_def(self):
+        self.eat("IDENT")
+
+        name = self.eat("IDENT")[1]
+
+        self.eat("LPAREN")
+        params = []
+
+        if self.current() and self.current()[0] != "RPAREN":
+            params.append(self.eat("IDENT")[1])
+            while self.current() and self.current()[0] == "COMMA":
+                self.eat("COMMA")
+                params.append(self.eat("IDENT")[1])
+        
+        self.eat("RPAREN")
+
+        body = self.parse_block()
+
+        return ("FUNC_DEF", name, params, body)
 
     def index_assignment(self, name):
         self.eat('LBRACKET')
