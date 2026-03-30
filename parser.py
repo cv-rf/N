@@ -41,6 +41,9 @@ class Parser:
             if tok[1] == 'if':
                 return self.if_statement()
 
+            if tok[1] == 'loop':
+                return self.loop_statement()
+
             if tok[1] == 'else':
                 return SyntaxError("else without if")
             
@@ -65,15 +68,7 @@ class Parser:
         self.eat("IDENT")
         condition = self.expression()
 
-        self.eat_newlines()
-        self.eat("INDENT")
-
-        if_body = []
-        while self.current() and self.current()[0] != "DEDENT":
-            if_body.append(self.statement())
-            self.eat_newlines()
-
-        self.eat("DEDENT")
+        if_body = self.parse_block()
 
         else_body = None
 
@@ -91,17 +86,17 @@ class Parser:
             ):
                 else_body = [self.if_statement()]
             else:
-                self.eat_newlines()
-                self.eat("INDENT")
-
-                else_body = []
-                while self.current() and self.current()[0] != "DEDENT":
-                    else_body.append(self.statement())
-                    self.eat_newlines()
-
-                self.eat("DEDENT")
+                else_body = self.parse_block()
 
         return ("IF", condition, if_body, else_body)
+
+    def loop_statement(self):
+        self.eat("IDENT")
+        condition = self.expression()
+
+        body = self.parse_block()
+
+        return ("LOOP", condition, body)
 
     def ident_statement(self):
         name = self.eat('IDENT')[1]
@@ -127,6 +122,18 @@ class Parser:
             return ('CALL', name, args)
 
         raise SyntaxError(f"Invalid IDENT usage: {name}")
+
+    def parse_block(self):
+        self.eat_newlines()
+        self.eat("INDENT")
+
+        body = []
+        while self.current() and self.current()[0] != "DEDENT":
+            body.append(self.statement())
+            self.eat_newlines()
+        
+        self.eat("DEDENT")
+        return body
 
     def index_assignment(self, name):
         self.eat('LBRACKET')

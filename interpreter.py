@@ -62,6 +62,18 @@ class Interpreter:
                 for stmt in else_body:
                     self.execute(stmt)
 
+        elif t == "LOOP":
+            _, condition, body = node
+
+            while self.eval(condition):
+                try:
+                    for stmt in body:
+                        self.execute(stmt)
+                except ContinueException:
+                    continue
+                except BreakException:
+                    break
+
         elif t == "RETURN":
             _, expr = node
             raise ReturnException(self.eval(expr))
