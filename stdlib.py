@@ -80,6 +80,12 @@ def std_recv(rt, args):
 
     return list(data)
 
+def std_tostring(rt, args):
+    return str(args[0])
+
+def std_toint(rt, args):
+    return int(args[0])
+
 def std_len(rt, args):
     if len(args) != 1:
         raise Exception("len expects 1 argument")
@@ -106,6 +112,8 @@ STDLIB = {
     "udp_connect": std_udp_connect,
     "send": std_send,
     "recv": std_recv,
+    "toString": std_tostring,
+    "toInt": std_toint,
     "len": std_len,
     "append": std_append,
 }

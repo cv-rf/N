@@ -18,6 +18,7 @@ func split(s, sep)
         return result
 
 func isDigit(c)
+        c = toString(c)
         return c >= "0" && c <= "9"
 
 func isAlpha(c)
