@@ -22,7 +22,6 @@ TOKEN_SPEC = [
 
 TOKEN_SPEC = [(name, re.compile(pattern)) for name, pattern in TOKEN_SPEC]
 
-
 def tokenize(code):
     tokens = []
     indent_stack = [0]

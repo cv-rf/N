@@ -1,4 +1,3 @@
-import "helper"
-
-x = 2
-print helper.isDigit(x)
+print "hello\nworld"
+print "tab\there"
+print "she said \"hi\""

@@ -343,4 +343,10 @@ class Parser:
         return ('MAP', pairs)
 
     def _strip_string(self, s):
-        return s[1:-1] if s.startswith('"') else s
+        s = s[1:-1] if s.startswith('"') else s
+        s = s.replace('\\\\', '\x00')
+        s = s.replace('\\"', '"')
+        s = s.replace('\\n', '\n')
+        s = s.replace('\\t', '\t')
+        s = s.replace('\x00', '\\')
+        return s
