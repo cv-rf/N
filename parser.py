@@ -38,6 +38,9 @@ class Parser:
             raise SyntaxError("Unexpected EOF")
 
         if tok[0] == 'IDENT':
+            if tok[1] == 'import':
+                return self.import_statement()
+
             if tok[1] == 'if':
                 return self.if_statement()
 
@@ -80,6 +83,12 @@ class Parser:
             return ('CONTINUE',)
 
         raise SyntaxError(f"Unexpected token in statement: {tok}")
+
+    def import_statement(self):
+        self.eat('IDENT')
+        module = self.eat('STRING')[1]
+        module = module.strip('"').strip("'")
+        return ('IMPORT', module)
 
     def if_statement(self):
         self.eat("IDENT")
@@ -127,7 +136,7 @@ class Parser:
             return ('ASSIGN', name, self.expression())
 
         if tok and tok[0] == 'LPAREN':
-            return ('CALL', name, self.func_args())
+            return ('EXPR', ('CALL', name, self.func_args()))
         
         if tok and tok[0] not in ('NEWLINE', 'DEDENT'):
             args = [self.expression()]
@@ -136,7 +145,7 @@ class Parser:
                 self.eat('COMMA')
                 args.append(self.expression())
 
-            return ('CALL', name, args)
+            return ('EXPR', ('CALL', name, args))
 
         raise SyntaxError(f"Invalid IDENT usage: {name}")
 
@@ -181,7 +190,7 @@ class Parser:
         return ('INDEX_ASSIGN', name, index, value)
 
     def expression(self):
-        return self.comparison()
+        return self.logic_or()
 
     def comparison(self):
         left = self.add_sub()
@@ -205,6 +214,26 @@ class Parser:
             op = self.eat('OP')[1]
             right = self.exponent()
             left = ('BINOP', op, left, right)
+        return left
+
+    def logic_or(self):
+        left = self.logic_and()
+
+        while self.current() and self.current()[0] == 'OP' and self.current()[1] == '||':
+            self.eat('OP')
+            right = self.logic_and()
+            left = ('BINOP', '||', left, right)
+        
+        return left
+    
+    def logic_and(self):
+        left = self.comparison()
+
+        while self.current() and self.current()[0] == 'OP' and self.current()[1] == '&&':
+            self.eat('OP')
+            right = self.comparison()
+            left = ('BINOP', '&&', left, right)
+            
         return left
 
     def exponent(self):
@@ -244,20 +273,25 @@ class Parser:
             return self.map_expr()
 
         if tok[0] == 'IDENT':
-            name = self.eat('IDENT')[1]
+            node = self.eat('IDENT')
+            name = node[1]
+            left = ('VAR', name)
+
+            while self.current() and self.current()[0] == 'DOT':
+                self.eat('DOT')
+                attr = self.eat('IDENT')[1]
+                left = ('GETATTR', left, attr)
 
             if self.current() and self.current()[0] == 'LBRACKET':
                 self.eat('LBRACKET')
                 index = self.expression()
                 self.eat('RBRACKET')
-                return ('INDEX', name, index)
+                return ('INDEX', left, index)
 
             if self.current() and self.current()[0] == 'LPAREN':
-                return ('CALL', name, self.func_args())
+                return ('EXPR', ('CALL', left, self.func_args()))
 
-            return ('VAR', name)
-
-        raise SyntaxError(f"Unexpected token in expression: {tok}")
+            return left
 
     def func_args(self):
         self.eat('LPAREN')

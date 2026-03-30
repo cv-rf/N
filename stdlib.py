@@ -1,5 +1,7 @@
 import socket
 
+from lexer import tokenize
+from parser import Parser
 
 class Runtime:
     def __init__(self):
@@ -78,6 +80,25 @@ def std_recv(rt, args):
 
     return list(data)
 
+def std_len(rt, args):
+    if len(args) != 1:
+        raise Exception("len expects 1 argument")
+    
+    value = args[0]
+
+    if isinstance(value, (str, list, dict)):
+        return len(value)
+    
+    raise Exception("len: unsupported type")
+
+def std_append(rt, args):
+    lst, value = args
+
+    if not isinstance(lst, list):
+        raise Exception("append: first argument must be a list")
+
+    lst.append(value)
+    return lst
 
 STDLIB = {
     "print": std_print,
@@ -85,4 +106,6 @@ STDLIB = {
     "udp_connect": std_udp_connect,
     "send": std_send,
     "recv": std_recv,
+    "len": std_len,
+    "append": std_append,
 }

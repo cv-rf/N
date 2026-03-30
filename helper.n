@@ -1,0 +1,48 @@
+func split(s, sep)
+        result = []
+        current = ""
+
+        i = 0
+        loop i < len(s)
+                c = s[i]
+
+                if c == sep
+                        result = append(result, current)
+                        current = ""
+                else
+                        current = current + c
+                
+                i = i + 1
+        
+        result = append(result, current)
+        return result
+
+func isDigit(c)
+        return c >= "0" && c <= "9"
+
+func isAlpha(c)
+        return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z")
+
+func makeToken(type, value)
+        return [type, value]
+
+func tokenType(t)
+        return t[0]
+
+func tokenValue(t)
+        return t[1]
+
+func makeNumber(value)
+        return ["NUMBER", value]
+
+func makeVar(name)
+        return ["VAR", name]
+
+func makeBinop(op, left, right)
+        return ["BINOP", op, left, right]
+
+func makeCall(name, args)
+        return ["CALL", name, args]
+
+func makeAssign(name, expr)
+        return ["ASSIGN", name, expr]

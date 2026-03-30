@@ -1,4 +1,6 @@
 from stdlib import STDLIB, Runtime
+from lexer import tokenize
+from parser import Parser
 
 class ReturnException(Exception):
     def __init__(self, value):
@@ -21,8 +23,13 @@ class Env:
     def get(self, name):
         if name in self.vars:
             return self.vars[name]
+        
         if self.parent:
-            return self.parent.get(name)
+                return self.parent.get(name)
+        
+        if hasattr(self, "builtins") and name in self.builtins:
+            return self.builtins[name]
+        
         raise Exception(f"Undefined variable: {name}")
 
     def set(self, name, value):
@@ -39,7 +46,9 @@ class Interpreter:
         self.global_env = Env()
         self.env = self.global_env
         self.runtime = Runtime()
-        self.builtins = STDLIB
+        self.runtime.interpreter = self
+        self.global_env.builtins = STDLIB.copy()
+        self.modules = {}
 
     def run(self, ast):
         try:
@@ -48,12 +57,42 @@ class Interpreter:
         except ReturnException:
             raise Exception("Return outside function")
 
+    def _import_module(self, module):
+        if module in self.modules:
+            self.global_env.set(module, self.modules[module])
+            return
+
+        path = module + ".n"
+
+        with open(path, "r") as f:
+            code = f.read()
+
+        ast = Parser(tokenize(code)).parse()
+
+        module_env = Env(self.global_env)
+
+        old_env = self.env
+        self.env = module_env
+
+        try:
+            for stmt in ast:
+                self.execute(stmt)
+        finally:
+            self.env = old_env
+
+        self.modules[module] = module_env
+        self.global_env.set(module, module_env)
+
     def execute(self, node):
         t = node[0]
 
         if t == "ASSIGN":
             _, name, expr = node
             self.env.set(name, self.eval(expr))
+
+        elif t == "IMPORT":
+            _, module = node
+            self._import_module(module)
 
         elif t == "IF":
             _, condition, if_body, else_body = node
@@ -92,12 +131,18 @@ class Interpreter:
 
         elif t == "CONTINUE":
             raise ContinueException()
+        
+        elif t == "EXPR":
+            self.eval(node[1])
 
         else:
             raise Exception(f"Unknown statement: {node}")
 
     def eval(self, node):
         t = node[0]
+
+        if t == "EXPR":
+            return self.eval(node[1])
 
         if t == "NUMBER":
             return node[1]
@@ -113,6 +158,18 @@ class Interpreter:
 
         if t == "LIST":
             return [self.eval(x) for x in node[1]]
+        
+        if t == "GETATTR":
+            _, obj, name = node
+            o = self.eval(obj)
+
+            if isinstance(o, dict):
+                return o[name]
+            
+            if isinstance(o, Env):
+                return o.get(name)
+
+            raise Exception("Invalid attribute access")
 
         if t == "MAP":
             return {
@@ -121,8 +178,9 @@ class Interpreter:
             }
 
         if t == "INDEX":
-            _, name, idx_expr = node
-            container = self.env.get(name)
+            _, obj, idx_expr = node
+
+            container = self.eval(obj)
             idx = self.eval(idx_expr)
 
             if isinstance(container, Buffer):
@@ -133,6 +191,12 @@ class Interpreter:
 
             if isinstance(container, dict):
                 return container[idx]
+
+            if isinstance(container, str):
+                return container[idx]
+
+            if isinstance(container, Env):
+                return container.get(idx)
 
             raise Exception("Invalid indexing target")
 
@@ -155,42 +219,65 @@ class Interpreter:
             if op == "<=": return a <= b
             if op == ">=": return a >= b
 
+            if op == "&&":
+                left = self.eval(l)
+                if not self.is_truthy(left):
+                    return left
+                return self.eval(r)
+            if op == "||":
+                left = self.eval(l)
+                if not self.is_truthy(left):
+                    return left
+                return self.eval(r)
+
         if t == "CALL":
             return self.call(node)
 
         raise Exception(f"Unknown expression: {node}")
 
     def call(self, node):
-        _, name, args = node
+        _, name_node, args = node
 
         evaluated_args = [self.eval(a) for a in args]
 
-        if name in self.builtins:
-            return self.builtins[name](self.runtime, evaluated_args)
+        if isinstance(name_node, tuple):
+            fn = self.eval(name_node)
+        else:
+            fn = self.env.get(name_node)
 
-        fn = self.env.get(name)
+        if callable(fn):
+            try:
+                return fn(self.runtime, evaluated_args)
+            except TypeError:
+                return fn(*evaluated_args)
 
-        if not isinstance(fn, tuple) or fn[0] != "FUNC":
-            raise Exception(f"{name} is not a function")
+        if isinstance(fn, tuple) and fn[0] == "FUNC":
+            _, params, body = fn
 
-        _, params, body = fn
+            if len(params) != len(evaluated_args):
+                raise Exception("Argument mismatch")
 
-        if len(params) != len(evaluated_args):
-            raise Exception("Argument mismatch")
+            child = Env(self.env)
 
-        child = Env(self.env)
+            for p, a in zip(params, evaluated_args):
+                child.set(p, a)
 
-        for p, a in zip(params, evaluated_args):
-            child.set(p, a)
+            try:
+                for stmt in body:
+                    self.execute_with_env(stmt, child)
+            except ReturnException as r:
+                return r.value
 
+            return None
+
+        raise Exception(f"{name_node} is not a function")
+
+    def execute_with_env(self, node, env):
         old = self.env
-        self.env = child
+        self.env = env
 
         try:
-            for stmt in body:
-                self.execute(stmt)
-        except ReturnException as r:
-            return r.value
+            return self.execute(node)
         finally:
             self.env = old
 

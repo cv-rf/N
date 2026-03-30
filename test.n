@@ -1,0 +1,5 @@
+# OLD - import("helper.n")
+import "helper"
+
+x = helper.split("a,b,c", ",")
+print x
