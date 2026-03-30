@@ -2,17 +2,17 @@ import "helper"
 
 func readNumber(code, i)
         num = ""
-        loop i < len(code) && isDigit(code[i])
+        loop i < len(code) && helper.isDigit(code[i])
                 num = num + code[i]
                 i = i + 1
-        return [makeToken("NUMBER", num), i]
+        return [helper.makeToken("NUMBER", num), i]
 
 func readIdent(code, i)
         ident = ""
-        loop i < len(code) && (isAlpha(code[i]) || isDigit(code[i]))
+        loop i < len(code) && (helper.isAlpha(code[i]) || helper.isDigit(code[i]))
                 ident = ident + code[i]
                 i = i + 1
-        return [makeToken("IDENT", ident), i]
+        return [helper.makeToken("IDENT", ident), i]
 
 func readString(code, i)
         i = i +1
@@ -33,7 +33,7 @@ func readString(code, i)
                         s = s + code[i]
                         i = i + 1
         i = i + 1
-        return [makeToken("STRING", s), i]
+        return [helper.makeToken("STRING", s), i]
 
 func tokenize(code)
         tokens = []
@@ -46,15 +46,15 @@ func tokenize(code)
                         i = i + 1
                 
                 else if c == "\n"
-                        tokens = append(tokens, makeToken("NEWLINE", "\n"))
+                        tokens = append(tokens, helper.makeToken("NEWLINE", "\n"))
                         i = i + 1
                 
-                else if isDigit(c)
+                else if helper.isDigit(c)
                         result = readNumber(code, i)
                         tokens = append(tokens, result[0])
                         i = result[1]
                 
-                else if isAlpha(c) || c == "_"
+                else if helper.isAlpha(c) || c == "_"
                         result = readIdent(code, i)
                         tokens = append(tokens, result[0])
                         i = result[1]
@@ -65,6 +65,6 @@ func tokenize(code)
                         i = result[1]
 
                 else
-                        tokens = append(tokens, makeToken("OP", c))
+                        tokens = append(tokens, helper.makeToken("OP", c))
                         i = i + 1
         return tokens

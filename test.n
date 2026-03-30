@@ -1,6 +1,6 @@
 import "lexer"
 source = readFile "helper"
-tokens = tokenize(source)
+tokens = lexer.tokenize(source)
 i = 0
 loop i < len(tokens)
         print tokens[i]
