@@ -80,6 +80,35 @@ def std_recv(rt, args):
 
     return list(data)
 
+def std_ord(rt, args):
+    if len(args[0]) != 1:
+        raise Exception("ord expects a single character")
+    return ord(args[0])
+
+def std_chr(rt, args):
+    return chr(args[0])
+
+def std_substr(rt, args):
+    s, start, end = args
+    return s[start:end]
+
+def std_upper(rt, args):
+    return args[0].upper()
+
+def std_lower(rt, args):
+    return args[0].lower()
+
+def std_trim(rt, args):
+    return args[0].strip()
+
+def std_contains(rt, args):
+    s, sub = args
+    return sub in s
+
+def std_replace(rt, args):
+    s, old, new = args
+    return s.replace(old, new)
+
 def std_tostring(rt, args):
     return str(args[0])
 
@@ -112,6 +141,14 @@ STDLIB = {
     "udp_connect": std_udp_connect,
     "send": std_send,
     "recv": std_recv,
+    "ord": std_ord,
+    "chr": std_chr,
+    "substr": std_substr,
+    "upper": std_upper,
+    "lower": std_lower,
+    "trim": std_trim,
+    "contains": std_contains,
+    "replace": std_replace,
     "toString": std_tostring,
     "toInt": std_toint,
     "len": std_len,
