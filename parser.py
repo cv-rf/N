@@ -294,6 +294,10 @@ class Parser:
 
             if self.current() and self.current()[0] == 'LPAREN':
                 return ('EXPR', ('CALL', left, self.func_args()))
+            
+            if self.current() and self.current()[0] in ('STRING', 'NUMBER'):
+                arg = self.factor()
+                return ('CALL', left, [arg])
 
             return left
 

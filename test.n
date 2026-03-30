@@ -1,3 +1,2 @@
-print "hello\nworld"
-print "tab\there"
-print "she said \"hi\""
+helper = readFile "helper"
+print helper

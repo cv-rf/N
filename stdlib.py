@@ -135,6 +135,24 @@ def std_append(rt, args):
     lst.append(value)
     return lst
 
+def std_read_file(rt, args):
+    path = args[0]
+    if '.' not in path.split('/')[-1]:
+        path = path + '.n'
+    with open(path, 'r') as f:
+        return f.read()
+
+def std_write_file(rt, args):
+    path, content = args
+    with open(path, 'w') as f:
+        f.write(content)
+    return None
+
+def std_exit(rt, args):
+    code = args[0] if args else 0
+    import sys
+    sys.exit(code)
+
 STDLIB = {
     "print": std_print,
     "connect": std_connect,
@@ -153,4 +171,7 @@ STDLIB = {
     "toInt": std_toint,
     "len": std_len,
     "append": std_append,
+    "readFile": std_read_file,
+    "writeFile": std_write_file,
+    "exit": std_exit,
 }
