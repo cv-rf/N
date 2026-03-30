@@ -1,2 +1,7 @@
-helper = readFile "helper"
-print helper
+import "lexer"
+source = readFile "helper"
+tokens = tokenize(source)
+i = 0
+loop i < len(tokens)
+        print tokens[i]
+        i = i + 1

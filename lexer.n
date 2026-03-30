@@ -1,0 +1,70 @@
+import "helper"
+
+func readNumber(code, i)
+        num = ""
+        loop i < len(code) && isDigit(code[i])
+                num = num + code[i]
+                i = i + 1
+        return [makeToken("NUMBER", num), i]
+
+func readIdent(code, i)
+        ident = ""
+        loop i < len(code) && (isAlpha(code[i]) || isDigit(code[i]))
+                ident = ident + code[i]
+                i = i + 1
+        return [makeToken("IDENT", ident), i]
+
+func readString(code, i)
+        i = i +1
+        s = ""
+        loop i < len(code) && code[i] != "\""
+                if code[i] == "\\" && i + 1 < len(code)
+                        next = code[i + 1]
+                        if next == "n"
+                                s = s + "\n"
+                        else if next == "t"
+                                s = s + "\t"
+                        else if next == "\\"
+                                s = s + "\\"
+                        else if next == "\""
+                                s = s + "\""
+                        i = i + 2
+                else
+                        s = s + code[i]
+                        i = i + 1
+        i = i + 1
+        return [makeToken("STRING", s), i]
+
+func tokenize(code)
+        tokens = []
+        i = 0
+
+        loop i < len(code)
+                c = code[i]
+
+                if c == " " || c == "\t"
+                        i = i + 1
+                
+                else if c == "\n"
+                        tokens = append(tokens, makeToken("NEWLINE", "\n"))
+                        i = i + 1
+                
+                else if isDigit(c)
+                        result = readNumber(code, i)
+                        tokens = append(tokens, result[0])
+                        i = result[1]
+                
+                else if isAlpha(c) || c == "_"
+                        result = readIdent(code, i)
+                        tokens = append(tokens, result[0])
+                        i = result[1]
+                
+                else if c == "\""
+                        result = readString(code, i)
+                        tokens = append(tokens, result[0])
+                        i = result[1]
+
+                else
+                        tokens = append(tokens, makeToken("OP", c))
+                        i = i + 1
+        return tokens
