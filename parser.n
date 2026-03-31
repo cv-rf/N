@@ -17,6 +17,13 @@ func eat(tokens, pos, type)
                 return [error("Expected " + type + " got " + tok[0]), pos]
         return [tok, pos + 1]
 
+func skipNewLines(tokens, pos)
+        tok = current(tokens, pos)
+        loop tok[0] == "NEWLINE"
+                pos = pos + 1
+                tok = current(tokens, pos)
+        return pos
+
 func parseNumber(tokens, pos)
         result = eat(tokens, pos, "NUMBER")
         tok = result[0]
@@ -32,6 +39,62 @@ func parseString(tokens, pos)
         if isError(tok)
                 return [tok, pos]
         return [["STRING", tok[1]], pos]
+
+func parseStatement(tokens, pos)
+        pos = skipNewLines(tokens, pos)
+        tok = current(tokens, pos)
+
+        if tok[0] == "IDENT" && tok[1] == "if"
+                return parseIf(tokens, pos)
+
+        if tok[0] == "IDENT" && tok[1] == "loop"
+                return parseLoop(tokens, pos)
+
+        if tok[0] == "IDENT" && tok[1] == "func"
+                return parseFuncDef(tokens, pos)
+
+        if tok[0] == "IDENT" && tok[1] == "return"
+                pos = pos + 1
+                tok = current(tokens, pos)
+                if tok[0] == "NEWLINE" || tok[0] == "DEDENT" || tok[0] == "EOF"
+                        return [["RETURN", 0], pos]
+                result = parseExpr(tokens, pos)
+                node = result[0]
+                pos = result[1]
+                return [["RETURN", node], pos]
+
+        if tok[0] == "IDENT" && tok[1] == "break"
+                pos = pos + 1
+                return [["BREAK"], pos]
+
+        if tok[0] == "IDENT" && tok[1] == "continue"
+                pos = pos + 1
+                return [["CONTINUE"], pos]
+
+        if tok[0] == "IDENT"
+                return parseIdentStatement(tokens, pos)
+
+        return [error("Unexpected token: " + tok[0]), pos]
+
+func parseIdentStatement(tokens, pos)
+        tok = current(tokens, pos)
+        name = tok[1]
+        pos = pos + 1
+        tok = current(tokens, pos)
+
+        if tok[0] == "OP" && tok[1] == "="
+                pos = pos + 1
+                result = parseExpr(tokens, pos)
+                node = result[0]
+                pos = result[1]
+                if isError(node)
+                        return [node, pos]
+                return [["ASSIGN", name, node], pos]
+
+        result = parseExpr(tokens, pos)
+        node = result[0]
+        pos = result[1]
+        return [["EXPR", ["CALL", name, [node]]], pos]
 
 func parseFactor(tokens, pos)
         tok = current(tokens, pos)
@@ -66,7 +129,7 @@ func parseMulDiv(tokens, pos)
         if isError(left)
                 return [left, pos]
         loop helper.isMulOp(current(tokens, pos))
-                tok = current(tok, pos)
+                tok = current(tokens, pos)
                 op = tok[1]
                 pos = pos + 1
                 result = parseFactor(tokens, pos)
@@ -84,7 +147,7 @@ func parseAddSub(tokens, pos)
         if isError(left)
                 return [left, pos]
         loop helper.isAddOp(current(tokens, pos))
-                tok = current(tok, pos)
+                tok = current(tokens, pos)
                 op = tok[1]
                 pos = pos + 1
                 result = parseMulDiv(tokens, pos)
@@ -102,7 +165,7 @@ func parseComparison(tokens, pos)
         if isError(left)
                 return [left, pos]
         loop helper.isCmpOp(current(tokens, pos))
-                tok = current(tok, pos)
+                tok = current(tokens, pos)
                 op = tok[1]
                 pos = pos + 1
                 result = parseAddSub(tokens, pos)
@@ -117,9 +180,9 @@ func parseLogicAnd(tokens, pos)
         result = parseComparison(tokens, pos)
         left = result[0]
         pos = result[1]
+        tok = current(tokens, pos)
         if isError(left)
                 return [left, pos]
-        tok = current(tokens, pos)
         loop tok[0] == "OP" && tok[1] == "&&"
                 pos = pos + 1
                 result = parseComparison(tokens, pos)
@@ -135,9 +198,9 @@ func parseLogicOr(tokens, pos)
         result = parseLogicAnd(tokens, pos)
         left = result[0]
         pos = result[1]
+        tok = current(tokens, pos)
         if isError(left)
                 return [left, pos]
-        tok = current(tokens, pos)
         loop tok[0] == "OP" && tok[1] == "||"
                 pos = pos + 1
                 result = parseLogicAnd(tokens, pos)
@@ -148,6 +211,107 @@ func parseLogicOr(tokens, pos)
                 left = ["BINOP", "||", left, right]
                 tok = current(tokens, pos)
         return [left, pos]
+
+func parseBlock(tokens, pos)
+        result = eat(tokens, pos, "INDENT")
+        pos = result[1]
+        stmts = []
+        tok = current(tokens, pos)
+        loop tok[0] != "DEDENT" && tok[0] != "EOF"
+                result = parseStatement(tokens, pos)
+                node = result[0]
+                pos = result[1]
+                if isError(node)
+                        return [node, pos]
+                stmts = append(stmts, node)
+                pos = skipNewLines(tokens, pos)
+                tok = current(tokens, pos)
+        result = eat(tokens, pos, "DEDENT")
+        pos = result[1]
+        return [stmts, pos]
+
+func parseIf(tokens, pos)
+        pos = pos + 1
+        result = parseExpr(tokens, pos)
+        cond = result[0]
+        pos = result[1]
+        if isError(cond)
+                return [cond, pos]
+        result = parseBlock(tokens, pos)
+        ifBody = result[0]
+        pos = result[1]
+        if isError(ifBody)
+                return [ifBody, pos]
+        elseBody = 0
+        pos = skipNewLines(tokens, pos)
+        tok = current(tokens, pos)
+        if tok[0] == "IDENT" && tok[1] == "else"
+                pos = pos + 1
+                tok = current(tokens, pos)
+                if tok[0] == "IDENT" && tok[1] == "if"
+                        result = parseIf(tokens, pos)
+                        elseBody = [result[0]]
+                        pos = result[1]
+                else
+                        result = parseBlock(tokens, pos)
+                        elseBody = result[0]
+                        pos = result[1]
+        return [["IF", cond, ifBody, elseBody], pos]
+
+func parseLoop(tokens, pos)
+        pos = pos + 1
+        result = parseExpr(tokens, pos)
+        cond = result[0]
+        pos = result[1]
+        if isError(cond)
+                return [cond, pos]
+        result = parseBlock(tokens, pos)
+        body = result[0]
+        pos = result[1]
+        if isError(body)
+                return [body, pos]
+        return [["LOOP", cond, body], pos]
+
+func parseFuncDef(tokens, pos)
+        pos = pos + 1
+        tok = current(tokens, pos)
+        name = tok[1]
+        pos = pos + 1
+        result = eat(tokens, pos, "OP")
+        pos = result[1]
+        params = []
+        tok = current(tokens, pos)
+        loop tok[0] != "OP" || tok[1] != ")"
+                param = tok[1]
+                params = append(params, param)
+                pos = pos + 1
+                tok = current(tokens, pos)
+                if tok[0] == "OP" && tok[1] == ","
+                        pos = pos + 1
+                        tok = current(tokens, pos)
+        result = eat(tokens, pos, "OP")
+        pos = result[1]
+        result = parseBlock(tokens, pos)
+        body = result[0]
+        pos = result[1]
+        if isError(body)
+                return [body, pos]
+        return [["FUNC_DEF", name, params, body], pos]
+
+func parse(tokens, pos)
+        stmts = []
+        pos = skipNewLines(tokens, pos)
+        tok = current(tokens, pos)
+        loop tok[0] != "EOF"
+                result = parseStatement(tokens, pos)
+                node = result[0]
+                pos = result[1]
+                if isError(node)
+                        return [node, pos]
+                stmts = append(stmts, node)
+                pos = skipNewLines(tokens, pos)
+                tok = current(tokens, pos)
+        return [stmts, pos]
 
 func parseExpr(tokens, pos)
         return parseLogicOr(tokens, pos)
