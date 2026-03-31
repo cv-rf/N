@@ -148,6 +148,14 @@ def std_write_file(rt, args):
         f.write(content)
     return None
 
+def std_pop(rt, args):
+    lst = args[0]
+    if not isinstance(lst, list):
+        raise Exception("pop: Argument must be a list")
+    if len(lst) == 0:
+        raise Exception("pop: list is empty")
+    return lst.pop()
+
 def std_exit(rt, args):
     code = args[0] if args else 0
     import sys
@@ -173,5 +181,6 @@ STDLIB = {
     "append": std_append,
     "readFile": std_read_file,
     "writeFile": std_write_file,
+    "pop": std_pop,
     "exit": std_exit,
 }

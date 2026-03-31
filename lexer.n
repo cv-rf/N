@@ -48,37 +48,76 @@ func readOp(code, i)
         
         return [helper.makeToken("OP", c), i + 1]
 
-func tokenize(code)
-        tokens = []
-        i = 0
+func countIndent(line, i)
+        count = 0
+        loop i < len(line) && line[1] == " "
+                count = count + 1
+                i = i + 1
+        return count
 
-        loop i < len(code)
-                c = code[i]
+func tokenizeLine(line, indent, tokens)
+        i = indent
+
+        loop i < len(line)
+                c = line[i]
 
                 if c == " " || c == "\t"
                         i = i + 1
-                
-                else if c == "\n"
-                        tokens = append(tokens, helper.makeToken("NEWLINE", "\n"))
-                        i = i + 1
-                
+
                 else if helper.isDigit(c)
-                        result = readNumber(code, i)
-                        tokens = append(tokens, result[0])
-                        i = result[1]
-                
-                else if helper.isAlpha(c) || c == "_"
-                        result = readIdent(code, i)
-                        tokens = append(tokens, result[0])
-                        i = result[1]
-                
-                else if c == "\""
-                        result = readString(code, i)
+                        result = readNumber(line, i)
                         tokens = append(tokens, result[0])
                         i = result[1]
 
-                else
-                        result = readOp(code, i)
+                else if helper.isAlpha(c) || c == "_"
+                        result = readIdent(line, i)
                         tokens = append(tokens, result[0])
                         i = result[1]
+
+                else if c == "\""
+                        result = readString(line, i)
+                        tokens = append(tokens, result[0])
+                        i = result[1]
+
+                else if c == "#"
+                        i = len(line)
+
+                else
+                        result = readOp(line, i)
+                        tokens = append(tokens, result[0])
+                        i = result[1]
+        
+        return tokens
+
+func tokenize(code)
+        tokens = []
+        lines = helper.split(code, "\n")
+        indentStack = [0]
+        i = 0
+
+        loop i < len(lines)
+                line = lines[i]
+
+                if len(trim(line)) == 0
+                        i = i + 1
+                else
+                        indent = countIndent(line, 0)
+                        current = indentStack[len(indentStack) - 1]
+
+                        if indent > current
+                                tokens = append(tokens, helper.makeToken("INDENT", ""))
+                                indentStack = append(indentStack, indent)
+                        
+                        loop indent < indentStack[len(indentStack) - 1]
+                                tokens = append(tokens, helper.makeToken("DEDENT", ""))
+                                pop(indentStack)
+                        
+                        tokens = tokenizeLine(line, indent, tokens)
+                        tokens = append(tokens, helper.makeToken("NEWLINE", "\n"))
+                        i = i + 1
+        
+        loop len(indentStack) > 1
+                tokens = append(tokens, helper.makeToken("DEDENT", ""))
+                pop(indentStack)
+        
         return tokens
