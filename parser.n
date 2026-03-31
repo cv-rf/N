@@ -1,0 +1,150 @@
+import "helper"
+
+func error(msg)
+        return ["ERROR", msg]
+
+func isError(node)
+        return node[0] == "ERROR"
+
+func current(tokens, pos)
+        if pos < len(tokens)
+                return tokens[pos]
+        return ["EOF", ""]
+
+func eat(tokens, pos, type)
+        tok = current(tokens, pos)
+        if tok[0] != type
+                return [error("Expected " + type + " got " + tok[0]), pos]
+        return [tok, pos + 1]
+
+func parseNumber(tokens, pos)
+        result = eat(tokens, pos, "NUMBER")
+        tok = result[0]
+        pos = result[1]
+        if isError(tok)
+                return [tok, pos]
+        return [["NUMBER", toInt(tok[1])], pos]
+
+func parseString(tokens, pos)
+        result = eat(tokens, pos, "STRING")
+        tok = result[0]
+        pos = result[1]
+        if isError(tok)
+                return [tok, pos]
+        return [["STRING", tok[1]], pos]
+
+func parseFactor(tokens, pos)
+        tok = current(tokens, pos)
+
+        if tok[0] == "NUMBER"
+                return parseNumber(tokens, pos)
+
+        if tok[0] == "STRING"
+                return parseString(tokens, pos)
+
+        if tok[0] == "IDENT"
+                pos = pos + 1
+                return [["VAR", tok[1]], pos]
+
+        if tok[0] == "OP" && tok[1] == "("
+                pos = pos + 1
+                result = parseExpr(tokens, pos)
+                node = result[0]
+                pos = result[1]
+                if isError(node)
+                        return [node, pos]
+                result = eat(tokens, pos, "OP")
+                pos = result[1]
+                return [node, pos]
+
+        return [error("Unexpected token: " + tok[0]), pos]
+
+func parseMulDiv(tokens, pos)
+        result = parseFactor(tokens, pos)
+        left = result[0]
+        pos = result[1]
+        if isError(left)
+                return [left, pos]
+        loop helper.isMulOp(current(tokens, pos))
+                op = current(tokens, pos)[1]
+                pos = pos + 1
+                result = parseFactor(tokens, pos)
+                right = result[0]
+                pos = result[1]
+                if isError(right)
+                        return [right, pos]
+                left = ["BINOP", op, left, right]
+        return [left, pos]
+
+func parseAddSub(tokens, pos)
+        result = parseMulDiv(tokens, pos)
+        left = result[0]
+        pos = result[1]
+        if isError(left)
+                return [left, pos]
+        loop helper.isAddOp(current(tokens, pos))
+                op = current(tokens, pos)[1]
+                pos = pos + 1
+                result = parseMulDiv(tokens, pos)
+                right = result[0]
+                pos = result[1]
+                if isError(right)
+                        return [right, pos]
+                left = ["BINOP", op, left, right]
+        return [left, pos]
+
+func parseComparison(tokens, pos)
+        result = parseAddSub(tokens, pos)
+        left = result[0]
+        pos = result[1]
+        if isError(left)
+                return [left, pos]
+        loop helper.isCmpOp(current(tokens, pos))
+                op = current(tokens, pos)[1]
+                pos = pos + 1
+                result = parseAddSub(tokens, pos)
+                right = result[0]
+                pos = result[1]
+                if isError(right)
+                        return [right, pos]
+                left = ["BINOP", op, left, right]
+        return [left, pos]
+
+func parseLogicAnd(tokens, pos)
+        result = parseComparison(tokens, pos)
+        left = result[0]
+        pos = result[1]
+        if isError(left)
+                return [left, pos]
+
+        loop current(tokens, pos)[0] == "OP" && current(tokens, pos)[1] == "&&"
+                pos = pos + 1
+                result = parseComparison(tokens, pos)
+                right = result[0]
+                pos = result[1]
+                if isError(right)
+                        return [right, pos]
+                left = ["BINOP", "&&", left, right]
+
+        return [left, pos]
+
+func parseLogicOr(tokens, pos)
+        result = parseLogicAnd(tokens, pos)
+        left = result[0]
+        pos = result[1]
+        if isError(left)
+                return [left, pos]
+
+        loop current(tokens, pos)[0] == "OP" && current(tokens, pos)[1] == "||"
+                pos = pos + 1
+                result = parseLogicAnd(tokens, pos)
+                right = result[0]
+                pos = result[1]
+                if isError(right)
+                        return [right, pos]
+                left = ["BINOP", "||", left, right]
+
+        return [left, pos]
+
+func parseExpr(tokens, pos)
+        return parseLogicOr(tokens, pos)

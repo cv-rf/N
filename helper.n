@@ -48,3 +48,18 @@ func makeCall(name, args)
 
 func makeAssign(name, expr)
         return ["ASSIGN", name, expr]
+
+func isMulOp(tok)
+        if tok[0] != "OP"
+                return 0
+        return tok[1] == "*" || tok[1] == "/" || tok[1] == "//"
+
+func isAddOp(tok)
+        if tok[0] != "OP"
+                return 0
+        return tok[1] == "+" || tok[1] == "-"
+
+func isCmpOp(tok)
+        if tok[0] != "OP"
+                return 0
+        return tok[1] == "==" || tok[1] == "!=" || tok[1] == "<" || tok[1] == ">" || tok[1] == "<=" || tok[1] == ">="
