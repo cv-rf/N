@@ -66,7 +66,8 @@ func parseMulDiv(tokens, pos)
         if isError(left)
                 return [left, pos]
         loop helper.isMulOp(current(tokens, pos))
-                op = current(tokens, pos)[1]
+                tok = current(tok, pos)
+                op = tok[1]
                 pos = pos + 1
                 result = parseFactor(tokens, pos)
                 right = result[0]
@@ -83,7 +84,8 @@ func parseAddSub(tokens, pos)
         if isError(left)
                 return [left, pos]
         loop helper.isAddOp(current(tokens, pos))
-                op = current(tokens, pos)[1]
+                tok = current(tok, pos)
+                op = tok[1]
                 pos = pos + 1
                 result = parseMulDiv(tokens, pos)
                 right = result[0]
@@ -100,7 +102,8 @@ func parseComparison(tokens, pos)
         if isError(left)
                 return [left, pos]
         loop helper.isCmpOp(current(tokens, pos))
-                op = current(tokens, pos)[1]
+                tok = current(tok, pos)
+                op = tok[1]
                 pos = pos + 1
                 result = parseAddSub(tokens, pos)
                 right = result[0]
@@ -116,8 +119,8 @@ func parseLogicAnd(tokens, pos)
         pos = result[1]
         if isError(left)
                 return [left, pos]
-
-        loop current(tokens, pos)[0] == "OP" && current(tokens, pos)[1] == "&&"
+        tok = current(tokens, pos)
+        loop tok[0] == "OP" && tok[1] == "&&"
                 pos = pos + 1
                 result = parseComparison(tokens, pos)
                 right = result[0]
@@ -125,7 +128,7 @@ func parseLogicAnd(tokens, pos)
                 if isError(right)
                         return [right, pos]
                 left = ["BINOP", "&&", left, right]
-
+                tok = current(tokens, pos)
         return [left, pos]
 
 func parseLogicOr(tokens, pos)
@@ -134,8 +137,8 @@ func parseLogicOr(tokens, pos)
         pos = result[1]
         if isError(left)
                 return [left, pos]
-
-        loop current(tokens, pos)[0] == "OP" && current(tokens, pos)[1] == "||"
+        tok = current(tokens, pos)
+        loop tok[0] == "OP" && tok[1] == "||"
                 pos = pos + 1
                 result = parseLogicAnd(tokens, pos)
                 right = result[0]
@@ -143,7 +146,7 @@ func parseLogicOr(tokens, pos)
                 if isError(right)
                         return [right, pos]
                 left = ["BINOP", "||", left, right]
-
+                tok = current(tokens, pos)
         return [left, pos]
 
 func parseExpr(tokens, pos)
