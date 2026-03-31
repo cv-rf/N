@@ -226,8 +226,20 @@ class Interpreter:
 
             raise Exception("Invalid indexing target")
 
-        if t == "BINOP":
+        if t == "BINOP":            
             _, op, l, r = node
+
+            if op == "&&":
+                left = self.eval(l)
+                if not self.is_truthy(left):
+                    return False
+                return self.eval(r)
+            if op == "||":
+                left = self.eval(l)
+                if self.is_truthy(left):
+                    return left
+                return self.eval(r)
+
             a = self.eval(l)
             b = self.eval(r)
 
@@ -251,17 +263,6 @@ class Interpreter:
                 if op == ">":  return a > b
                 if op == "<=": return a <= b
                 if op == ">=": return a >= b
-
-            if op == "&&":
-                left = self.eval(l)
-                if not self.is_truthy(left):
-                    return False
-                return self.eval(r)
-            if op == "||":
-                left = self.eval(l)
-                if self.is_truthy(left):
-                    return left
-                return self.eval(r)
 
         if t == "CALL":
             return self.call(node)

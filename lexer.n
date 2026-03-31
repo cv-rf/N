@@ -15,20 +15,26 @@ func readIdent(code, i)
         return [helper.makeToken("IDENT", ident), i]
 
 func readString(code, i)
-        i = i +1
+        i = i + 1
         s = ""
         loop i < len(code) && code[i] != "\""
                 if code[i] == "\\" && i + 1 < len(code)
                         next = code[i + 1]
                         if next == "n"
                                 s = s + "\n"
+                                i = i + 2
                         else if next == "t"
                                 s = s + "\t"
+                                i = i + 2
                         else if next == "\\"
                                 s = s + "\\"
+                                i = i + 2
                         else if next == "\""
                                 s = s + "\""
-                        i = i + 2
+                                i = i + 2
+                        else
+                                s = s + code[i]
+                                i = i + 1
                 else
                         s = s + code[i]
                         i = i + 1
@@ -50,7 +56,7 @@ func readOp(code, i)
 
 func countIndent(line, i)
         count = 0
-        loop i < len(line) && line[1] == " "
+        loop i < len(line) && line[i] == " "
                 count = count + 1
                 i = i + 1
         return count
@@ -97,7 +103,6 @@ func tokenize(code)
 
         loop i < len(lines)
                 line = lines[i]
-
                 if len(trim(line)) == 0
                         i = i + 1
                 else
