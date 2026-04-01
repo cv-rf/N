@@ -221,8 +221,8 @@ func parseBlock(tokens, pos)
         result = eat(tokens, pos, "INDENT")
         pos = result[1]
         stmts = []
-        tok = current(tokens, pos)
-        loop tok[0] != "DEDENT" && tok[0] != "EOF"
+        btok = current(tokens, pos)
+        loop btok[0] != "DEDENT" && btok[0] != "EOF"
                 result = parseStatement(tokens, pos)
                 node = result[0]
                 pos = result[1]
@@ -230,7 +230,7 @@ func parseBlock(tokens, pos)
                         return [node, pos]
                 stmts = append(stmts, node)
                 pos = skipNewLines(tokens, pos)
-                tok = current(tokens, pos)
+                btok = current(tokens, pos)
         result = eat(tokens, pos, "DEDENT")
         pos = result[1]
         return [stmts, pos]
