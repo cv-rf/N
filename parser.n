@@ -4,6 +4,10 @@ func error(msg)
         return ["ERROR", msg]
 
 func isError(node)
+        if len(node) == 0
+                return 0
+        if !isString(node[0])
+                return 0
         return node[0] == "ERROR"
 
 func current(tokens, pos)
@@ -213,6 +217,7 @@ func parseLogicOr(tokens, pos)
         return [left, pos]
 
 func parseBlock(tokens, pos)
+        pos = skipNewLines(tokens, pos)
         result = eat(tokens, pos, "INDENT")
         pos = result[1]
         stmts = []

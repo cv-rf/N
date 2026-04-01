@@ -18,6 +18,8 @@ def std_print(rt, args):
     print(*values)
     return None
 
+def std_isstring(rt, args):
+    return isinstance(args[0], str)
 
 def std_connect(rt, args):
     host, port = args
@@ -163,6 +165,7 @@ def std_exit(rt, args):
 
 STDLIB = {
     "print": std_print,
+    "isString": std_isstring,
     "connect": std_connect,
     "udp_connect": std_udp_connect,
     "send": std_send,
