@@ -158,6 +158,14 @@ def std_pop(rt, args):
         raise Exception("pop: list is empty")
     return lst.pop()
 
+def std_contains(rt, args):
+    container, key = args
+    if isinstance(container, str):
+        return key in container
+    if isinstance(container, dict):
+        return key in container
+    return Exception("contains: unsupported type")
+
 def std_exit(rt, args):
     code = args[0] if args else 0
     import sys
@@ -185,5 +193,6 @@ STDLIB = {
     "readFile": std_read_file,
     "writeFile": std_write_file,
     "pop": std_pop,
+    "contains": std_contains,
     "exit": std_exit,
 }

@@ -210,7 +210,7 @@ class Parser:
 
     def mul_div(self):
         left = self.exponent()
-        while self.current() and self.current()[0] == 'OP' and self.current()[1] in ('*', '/', '//'):
+        while self.current() and self.current()[0] == 'OP' and self.current()[1] in ('*', '/', '//', '%'):
             op = self.eat('OP')[1]
             right = self.exponent()
             left = ('BINOP', op, left, right)

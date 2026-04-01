@@ -1,0 +1,88 @@
+func envNew(parent)
+        env = {}
+        env["__parent__"] = parent
+        return env
+
+func envGet(env, name)
+        if contains(env, name)
+                return env[name]
+        if env["__parent__"] != 0
+                return envGet(env["__parent__"], name)
+        return ["ERROR", "Undefined variable: " + name]
+
+func envSet(env, name, value)
+        env[name] = value
+        return env
+
+func isTruthy(value)
+        if value == 0
+                return 0
+        if value == ""
+                return 0
+        if isString(value)
+                return 1
+        return 1
+
+func evalNode(node, env)
+        type = node[0]
+
+        if type == "NUMBER"
+                return node[1]
+
+        if type == "STRING"
+                return node[1]
+
+        if type == "VAR"
+                return envGet(env, node[1])
+
+        if type == "BINOP"
+                return evalBinop(node, env)
+
+        if type == "CALL"
+                return evalCall(node, env)
+
+        if type == "LIST"
+                return evalList(node, env)
+
+        return ["ERROR", "Unknown node type: " + type]
+
+func evalList(node, env)
+        items = node[1]
+        result = []
+        i = 0
+        loop i < len(items)
+                result = append(result, evalNode(items[i], env))
+                i = i + 1
+        return result
+
+func evalBinop(node, env)
+        op = node[1]
+        left = evalNode(node[2], env)
+        right = evalNode(node[3], env)
+
+        if op == "+"
+                return left + right
+        if op == "-"
+                return left - right
+        if op == "*"
+                return left * right
+        if op == "/"
+                return left / right
+        if op == "//"
+                return left // right
+        if op == "%"
+                return left % right
+        if op == "=="
+                return left == right
+        if op == "!="
+                return left != right
+        if op == "<"
+                return left < right
+        if op == ">"
+                return left > right
+        if op == "<="
+                return left <= right
+        if op == ">="
+                return left >= right
+
+        return ["ERROR", "Unknown op: " + op]
