@@ -141,6 +141,9 @@ class Interpreter:
                 except BreakException:
                     break
 
+                if self.frames and self.frames[-1]["should_return"]:
+                    break
+
         elif t == "RETURN":
             if not self.frames:
                 raise Exception("Return outside function")

@@ -1,11 +1,7 @@
 import "lexer"
 import "parser"
-import "interpreter"
 
-source = "1 + 2 * 3"
+source = "x = 1 + 2 * 3"
 tokens = lexer.tokenize(source)
 result = parser.parse(tokens, 0)
-ast = result[0]
-node = ast[0]
-env = interpreter.envNew(0)
-print interpreter.evalNode(node, env)
+print result[0]
