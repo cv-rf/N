@@ -7,8 +7,6 @@ func split(s, sep)
                 c = s[i]
 
                 if c == sep
-                        print "splitting, current ="
-                        print current
                         result = append(result, current)
                         current = ""
                 else

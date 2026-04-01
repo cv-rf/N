@@ -110,8 +110,28 @@ func parseFactor(tokens, pos)
                 return parseString(tokens, pos)
 
         if tok[0] == "IDENT"
+                name = tok[1]
                 pos = pos + 1
-                return [["VAR", tok[1]], pos]
+                tok = current(tokens, pos)
+                if tok[0] == "OP" && tok[1] == "("
+                        pos = pos + 1
+                        args = []
+                        tok = current(tokens, pos)
+                        loop tok[0] != "OP" || tok[1] != ")"
+                                result = parseExpr(tokens, pos)
+                                arg = result[0]
+                                pos = result[1]
+                                if isError(arg)
+                                        return [arg, pos]
+                                args = append(args, arg)
+                                tok = current(tokens, pos)
+                                if tok[0] == "OP" && tok[1] == ","
+                                        pos = pos + 1
+                                        tok = current(tokens, pos)
+                        result = eat(tokens, pos, "OP")
+                        pos = result[1]
+                        return [["CALL", name, args], pos]
+                return [["VAR", name], pos]
 
         if tok[0] == "OP" && tok[1] == "("
                 pos = pos + 1
@@ -304,14 +324,10 @@ func parseFuncDef(tokens, pos)
         return [["FUNC_DEF", name, params, body], pos]
 
 func parse(tokens, pos)
-        print "in parse"
         stmts = []
         pos = skipNewLines(tokens, pos)
         tok = current(tokens, pos)
-        print tok
         loop tok[0] != "EOF"
-                print "parse loop iter"
-                print tok
                 result = parseStatement(tokens, pos)
                 node = result[0]
                 pos = result[1]
