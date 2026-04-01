@@ -191,12 +191,12 @@ class Parser:
 
     def expression(self):
         return self.logic_or()
-
-    def comparison(self):
-        left = self.add_sub()
-        while self.current() and self.current()[0] == 'OP' and self.current()[1] in ('==', '!=', '<', '>', '<=', '>='):
+    
+    def mul_div(self):
+        left = self.exponent()
+        while self.current() and self.current()[0] == 'OP' and self.current()[1] in ('*', '/', '//', '%'):
             op = self.eat('OP')[1]
-            right = self.add_sub()
+            right = self.exponent()
             left = ('BINOP', op, left, right)
         return left
 
@@ -207,12 +207,12 @@ class Parser:
             right = self.mul_div()
             left = ('BINOP', op, left, right)
         return left
-
-    def mul_div(self):
-        left = self.exponent()
-        while self.current() and self.current()[0] == 'OP' and self.current()[1] in ('*', '/', '//', '%'):
+    
+    def comparison(self):
+        left = self.add_sub()
+        while self.current() and self.current()[0] == 'OP' and self.current()[1] in ('==', '!=', '<', '>', '<=', '>='):
             op = self.eat('OP')[1]
-            right = self.exponent()
+            right = self.add_sub()
             left = ('BINOP', op, left, right)
         return left
 

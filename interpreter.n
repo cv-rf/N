@@ -24,6 +24,7 @@ func isTruthy(value)
         return 1
 
 func evalNode(node, env)
+        print node[0]
         type = node[0]
 
         if type == "NUMBER"
