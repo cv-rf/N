@@ -49,6 +49,10 @@ class Parser:
             
             if tok[1] == 'func':
                 return self.func_def()
+            
+            if tok[1] == 'true': return ('BOOL', True)
+
+            if tok[1] == 'false': return ('BOOL', False)
 
             if tok[1] == 'return':
                 self.eat('IDENT')
