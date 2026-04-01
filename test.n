@@ -1,7 +1,5 @@
 import "lexer"
 import "parser"
-
 source = "func add(a, b)\n        return a + b\n\nx = add(1, 2)\nprint x"
 tokens = lexer.tokenize(source)
 result = parser.parse(tokens, 0)
-print result[0]

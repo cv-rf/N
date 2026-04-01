@@ -113,19 +113,15 @@ class Interpreter:
             _, condition, if_body, else_body = node
 
             if self.is_truthy(self.eval(condition)):
-                if_env = Env(self.env)
-                old_env = self.env
-                self.env = if_env
                 for stmt in if_body:
                     self.execute(stmt)
-                self.env = old_env
+                    if self.frames and self.frames[-1]["should_return"]:
+                        break
             elif else_body:
-                else_env = Env(self.env)
-                old_env = self.env
-                self.env = else_env
                 for stmt in else_body:
                     self.execute(stmt)
-                self.env = old_env
+                    if self.frames and self.frames[-1]["should_return"]:
+                        break
 
         elif t == "FUNC_DEF":
             _, name, params, body = node
@@ -136,19 +132,13 @@ class Interpreter:
 
             while self.is_truthy(self.eval(condition)):
                 try:
-                    loop_env = Env(self.env)
-                    old_env = self.env
-                    self.env = loop_env
                     for stmt in body:
                         self.execute(stmt)
                         if self.frames and self.frames[-1]["should_return"]:
                             break
-                    self.env = old_env
                 except ContinueException:
-                    self.env = old_env
                     continue
                 except BreakException:
-                    self.env = old_env
                     break
 
         elif t == "RETURN":

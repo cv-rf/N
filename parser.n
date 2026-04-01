@@ -161,7 +161,7 @@ func parseAddSub(tokens, pos)
                         return [right, pos]
                 left = ["BINOP", op, left, right]
         return [left, pos]
-
+ 
 func parseComparison(tokens, pos)
         result = parseAddSub(tokens, pos)
         left = result[0]
@@ -262,7 +262,7 @@ func parseIf(tokens, pos)
                         elseBody = result[0]
                         pos = result[1]
         return [["IF", cond, ifBody, elseBody], pos]
-
+        
 func parseLoop(tokens, pos)
         pos = pos + 1
         result = parseExpr(tokens, pos)
@@ -304,10 +304,14 @@ func parseFuncDef(tokens, pos)
         return [["FUNC_DEF", name, params, body], pos]
 
 func parse(tokens, pos)
+        print "in parse"
         stmts = []
         pos = skipNewLines(tokens, pos)
         tok = current(tokens, pos)
+        print tok
         loop tok[0] != "EOF"
+                print "parse loop iter"
+                print tok
                 result = parseStatement(tokens, pos)
                 node = result[0]
                 pos = result[1]
