@@ -24,7 +24,6 @@ func isTruthy(value)
         return 1
 
 func evalNode(node, env)
-        print node[0]
         type = node[0]
 
         if type == "NUMBER"
@@ -55,6 +54,47 @@ func evalList(node, env)
                 result = append(result, evalNode(items[i], env))
                 i = i + 1
         return result
+
+func evalCall(node, env)
+        name = node[1]
+        args = node[2]
+
+        evaledArgs = []
+        i = 0
+        loop i < len(args)
+                evaledArgs = append(evaledArgs, evalNode(args[i], env))
+                i = i + 1
+
+        fn = 0
+        if isString(name)
+                fn = envGet(env, name)
+        else
+                fn = evalNode(name, env)
+        
+                if isString(fn)
+                        return ["ERROR", "Not a function: " + fn]
+
+                if fn[0] == "BUILTIN"
+                        return callBuiltin(fn[1], evaledArgs)
+                
+                if fn[0] == "FUNC"
+                        params = fn[1]
+                        body = fn[2]
+                        closure = fn[3]
+
+                        frameEnv = envNew(closure)
+                        i = 0
+                        loop i < len(params)
+                                envSet(frameEnv, params[i], evaledArgs[i])
+                                i = i + 1
+                        
+                        result = execBlock(body, frameEnv)
+
+                        if isSignal(result)
+                                if result[0] == "RETURN"
+                                        return result[1]
+                        return 0
+        return ["ERROR", "Not a function"]
 
 func execStmt(node, env)
         type = node[0]
@@ -174,3 +214,57 @@ func evalBinop(node, env)
         if op == ">="
                 return left >= right
         return ["ERROR", "Unknown op: " + op]
+
+func setupBuiltins(env)
+        envSet(env, "print", ["BUILTIN", "print"])
+        envSet(env, "len", ["BUILTIN", "len"])
+        envSet(env, "append", ["BUILTIN", "append"])
+        envSet(env, "pop", ["BUILTIN", "pop"])
+        envSet(env, "contains", ["BUILTIN", "contains"])
+        envSet(env, "isString", ["BUILTIN", "isString"])
+        envSet(env, "toString", ["BUILTIN", "toString"])
+        envSet(env, "toInt", ["BUILTIN", "toInt"])
+        envSet(env, "trim", ["BUILTIN", "trim"])
+        envSet(env, "ord", ["BUILTIN", "ord"])
+        envSet(env, "chr", ["BUILTIN", "chr"])
+        envSet(env, "substr", ["BUILTIN", "substr"])
+        envSet(env, "readFile", ["BUILTIN", "readFile"])
+        envSet(env, "writeFile", ["BUILTIN", "writeFile"])
+        envSet(env, "exit", ["BUILTIN", "exit"])
+        return env
+
+func callBuiltin(name, args)
+        if name == "print"
+                print args[0]
+                return 0
+        if name == "len"
+                return len(args[0])
+        if name == "append"
+                return append(args[0], args[1])
+        if name == "pop"
+                return pop(args[0])
+        if name == "contains"
+                return contains(args[0], args[1])
+        if name == "isString"
+                return isString(args[0])
+        if name == "toString"
+                return toString(args[0])
+        if name == "toInt"
+                return toInt(args[0])
+        if name == "trim"
+                return trim(args[0])
+        if name == "ord"
+                return ord(args[0])
+        if name == "chr"
+                return chr(args[0])
+        if name == "substr"
+                return substr(args[0], args[1], args[2])
+        if name == "readFile"
+                return readFile(args[0])
+        if name == "writeFile"
+                writeFile(args[0], args[1])
+                return 0
+        if name == "exit"
+                exit(args[0])
+                return 0
+        return ["ERROR", "Unknown builtin: " + name]

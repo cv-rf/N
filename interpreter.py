@@ -104,6 +104,13 @@ class Interpreter:
         if t == "ASSIGN":
             _, name, expr = node
             self.env.set(name, self.eval(expr))
+        
+        elif t == "INDEX_ASSIGN":
+            _, name, idx_expr, val_expr = node
+            container = self.env.get(name)
+            idx = self.eval(idx_expr)
+            value = self.eval(val_expr)
+            container[idx] = value
 
         elif t == "IMPORT":
             _, module = node

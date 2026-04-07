@@ -132,6 +132,14 @@ class Parser:
         name = self.eat('IDENT')[1]
         tok = self.current()
 
+        if tok and tok[0] == 'DOT':
+            self.eat('DOT')
+            attr = self.eat('IDENT')[1]
+            left = ('GETATTR', ('VAR', name), attr)
+            if self.current() and self.current()[0] == 'LPAREN':
+                return ('EXPR', ('CALL', left, self.func_args()))
+            raise SyntaxError(f"Expected ( after attribute access in statement")
+
         if tok and tok[0] == 'LBRACKET':
             return self.index_assignment(name)
 
